@@ -1,0 +1,1142 @@
+Boruah and Biswas ﻿
+Health Information Science and Systems
+(2026) 14:19
+https://doi.org/10.1007/s13755-025-00418-7
+Health Information Science
+and Systems
+RESEARCH
+DiabeRules: a transparent rule based expert
+system for managing diabetes
+Arpita Nath Boruah1* and Saroj Kumar Biswas2
+Abstract
+Diabetes, often referred to as a chronic disease, encompasses a group of metabolic disorders characterized by persistently elevated blood sugar levels. It is a major cause of death each year, with many individuals unaware of their
+condition until it is too late. This long-term disease impairs the body’s ability to produce insulin, leading to excessive
+blood sugar levels that can result in eye impairment, nerve damage, cardiovascular damage, kidney damage, and
+stroke. Therefore, it is crucial to develop a system that can detect diabetes early, alerting individuals to the danger and
+enabling them to take preventive measures to manage it. Early identification of risk factors can significantly reduce
+the severity of the disease. Considering the severity of the disease and the research work done till date, this paper
+introduces an expert system named DiabeRules: Diabetes Management using Comprehensible Rules. The system
+employs a decision tree (DT) to identify the primary rules responsible for diabetes in detail. To derive promising rules,
+a hybrid DT is created and further refined to eliminate irrelevant rules using a Sequential Hill Climbing approach with
+a customizable heuristic function. The DiabeRules model ultimately generates a decision rule set that is transparent
+and comprehensible, helping individuals understand how to manage diabetes. Using a diabetes dataset from the UCI
+repository, the performance of the DiabeRules system is compared to that of current, recently developed systems. The
+experimental results demonstrate that the proposed DiabeRules system is effective in managing diabetes by focusing
+on essential rules and critical risk factors.
+Keywords: Diabetes, Disease management, Machine learning, Decision tree, Rule based system, Hill climbing
+approach, Heuristic search
+Introduction
+According to the World Health Organization (WHO), 1.6
+million individuals worldwide lose their lives to diabetes
+each year. One condition that develops when blood glucose/blood sugar levels are extremely high in the body
+is diabetes. Diabetes is one of the top ten leading causes
+of death in 2016. Diabetes has surpassed HIV/AIDS as
+the sixth leading cause of death. The global prevalence
+of diabetes among individuals over 18 years of age has
+increased from 4.7% in 1980 to 8.5% in 2014, with the
+number of persons with diabetes rising from 108 million
+in 1980 to 422 million in 2014. Diabetes is predicted to
+affect 642 million persons (1 in 10) by 2040. In addition,
+*Correspondence: arpita.boruah@hotmail.com
+1
+Faculty of Computer Technology, Assam Down Town University, Sankar
+Madhab Path, Gandhi Nagar, Panikhaiti, Guwahati, Assam 781026, India
+Full list of author information is available at the end of the article
+46.5 percent of those with diabetes are undiagnosed.
+Type I diabetes and Type II diabetes are the two main
+kinds of diabetes. Insulin deficiency develops in type 1
+diabetes when the pancreas does not generate enough or
+is unable to make insulin because of a birth abnormality.
+Type 1 diabetes is an uncommon condition that mostly
+affects children under the age of 18. Insulin resistance is a
+symptom of type 2. The body can still create insulin, but
+it can’t digest glucose. Type 2 diabetes affects approximately 90% of people worldwide [1]. According to the
+International Diabetes Federation (IDF) [2], there are
+approximately 463 million persons with diabetes between
+the ages of 20 and 79 years. There is no treatment for diabetes yet, but the illness can be managed by modifying
+one’s lifestyle and doing the appropriate activities. The
+disease’s difficulty has prompted scientists to create a
+prognostic decision support system (DSS) to assist practitioners in disease diagnosis. Because a high percentage
+© The Author(s), under exclusive licence to Springer Nature Switzerland AG 2025.
+
+Content courtesy of Springer Nature, terms of use apply. Rights reserved.
+
+Boruah and Biswas ﻿Health Information Science and Systems
+(2026) 14:19
+of diabetic patients die because of late diagnosis, it is
+essential to design methodologies that will facilitate in
+early detection of diabetes to minimize the number of
+deaths owing to diabetes. The Center for Disease Control
+and Prevention (CDC)-led National Diabetes Prevention
+Program, a lifestyle change program, can help to change
+a prediabetes patient’s lifestyle and prevent developing
+diabetes. The healthcare industry collects an enormous
+amount of data include hospital records, medical records
+of patients, and results of medical examinations. For
+early disease diagnosis, the disease’s prediction is analyzed through a doctor’s experience and knowledge, but
+that can be inaccurate and susceptible. Hence the manual
+decisions can be alarming. The hidden pattern of data
+can be unnoticed, which can impact decision-making;
+therefore, patients become deprived of the appropriate
+treatment. Automated identification with better accuracy
+is essential for the early detection of diabetes [3–5].
+To achieve cutting-edge techniques for the early diagnosis of diabetes, it is required to make better use of
+new information technology, and data mining is a good
+place to start. Data mining allows us to extract previously undiscovered, hidden, yet intriguing patterns from
+a vast database collection. These patterns can help doctors make better diagnoses and decisions. One of the data
+mining strategies utilised in much research in the health
+sector to construct prediction models is classification [6].
+These classification approaches have been proven to be
+capable of detecting relationships and patterns among
+database features, as well as employing the results and
+patterns obtained for diagnosis and prediction [7]. The
+decision tree is an effective and commonly used classification system that has been employed in a variety of
+medical fields, including studies on prediction and diagnosis, and its use for prediction has expanded dramatically [8].
+The decision tree (DT) is a common transparent
+machine learning technique that creates clear rules for
+a decision [9]. The knowledge learned by a DT is represented by these rules, which are also known as P-Rules
+or Production Rules. DT can construct transparent decision rules with a combination of factors in the antecedent
+part of the rules. However, it occasionally generates some
+redundant and unnecessary rules, reducing its comprehensibility. In case of medical science to prevent a disease
+like diabetes a clear explanation of the causes of the disease is required to spread awareness among the common
+people and to take some precautionary measures to prevent/manage the disease in advance. Therefore, this paper
+proposes an expert system for diabetes named, DiabeRules: Diabetes Management using Transparent Rules to
+control and manage the disease with a few decision rules.
+The proposed DiabeRules produces the most relevant
+Page 2 of 15
+rules for diabetes prediction using DT. DiabeRules generates rules using a hybrid DT. The hybrid DT is generated by selecting the best features using a combination
+of filter and a wrapper feature selection approach. The
+feature set is initially processed by the proposed wrapper feature selection technique, Stochastic Hill Climbing
+with K nearest neighbor (SHCK) and then using the filter
+approach builds the hybrid DT. All the rules generated by
+the hybrid DT are not essential thus the rules are given
+certain weights and processed to obtain the most essential and relevant rules for decision making.
+The generated rules can assist the physicians to diagnose a disease with great ease. For example, consider the
+rule: {IF blood sugar level =  = High, THEN Class = Diabetes. Here, diabetes can be diagnosed by looking at the
+blood sugar level and further diabetes can be controlled
+by controlling the blood sugar level.
+The following is a breakdown of the paper’s structure:
+The section “Related works” illustrates the existing literature on diabetes diagnosis and prediction using DT
+and other classifiers, the section “The proposed diabetes
+management system using transparent rules” explains
+the proposed DiabeRules system in detail, the section
+“Experimental results and discussion” shows the results
+of diabetes management using the Pima India Diabetes
+dataset, and the section “Conclusion” draws conclusions.
+
+Related works
+Researchers’ attention has recently been drawn to the use
+of machine learning algorithms in medical science [10–
+12]. Many studies have been conducted utilizing various
+machine learning algorithms to detect and predict various diseases, and machine learning algorithms are widely
+regarded as the most effective in this regard. The most
+used machine learning algorithm for diagnosing and predicting various diseases is decision trees (DTs). Kadhm
+et al. [13] proposed the use of a DT to assign each data
+sample to its appropriate class after applying the K-nearest neighbour algorithm for eliminating undesired data.
+Patil et al. [14] have proposed a hybrid prediction model
+that applied k-means clustering to the original dataset
+and then used C4.5 algorithms in building the classifier
+model. The classification accuracy result was 92.38%.
+Khandegar [15] proposed a methodology based on principal component analysis (PCA) to reduce the dimension
+of extracted features with neural network (NN) as the
+classifier. The accuracy result was 92.2%. Song et al. [16]
+various algorithm have been was explained using different parameters such as glucose, blood pressure (BP), skin
+thickness (ST), insulin, body max index (BMI), diabetes
+pedigree function (DPF), and age. All parameters have
+not been included. Only Small sample data used. ANN,
+EM, GMM, Logistic regression, and SVM were applied
+Content courtesy of Springer Nature, terms of use apply. Rights reserved.
+
+Boruah and Biswas ﻿Health Information Science and Systems
+(2026) 14:19
+on diabetes dataset. Artificial neural network (ANN) was
+provided better accuracy and performance than other
+algorithm. Meng et al. [17] have used different data mining techniques to predict the diabetic diseases using real
+world data sets by collecting information by distributing questioner. SPSS and weka tools have been used for
+data analysis and prediction respectively. On the contrary
+Rabina et al. [18] have applied supervised and unsupervised learning to diagnose diabetes patients. They used
+the WEKA tool to find the best classification models and
+the Decision Tree is better performance than the others. Joshi et al. [19] have proposed three techniques for
+earlier detection of diabetes patients. The author compared machine learning models including SVM, Logistic regression, and ANN with 7 attributes in the data
+set (Glucose, Blood Pressure, Skin Thickness, Insulin,
+BMI, Diabetes Pedigree Function, and age). After applying these models, the performance of the support vector
+machine (SVM) is better than other classification methods. Mirza et al. [20] have proposed a method by combining two methods to improve the predictive accuracy.
+They have used SMOTE to handle the class imbalance
+problem and in the second stage diagnoses is done using
+the DT. Azad et al. [21] have proposed a model named as
+prediction model using synthetic minority oversampling
+technique, genetic algorithm and decision tree (PMSGD)
+Page 3 of 15
+for Diabetes classification. PMSGD has 4 different layers,
+in which the first layer analysis the dataset by handling
+the missing values and imbalance class, in the second
+layer the relevant features have been extracted and then
+model has been trained in the third layer followed by the
+predictions. Alehegn et al. [22] have proposed an ensemble hybrid model by combining individual methods like
+SVM, Naïve Bayes. Krishnaveni et al. [23] have proposed
+a six various techniques to predict diabetic disease. The
+used techniques are Discriminant analysis, KNN Algorithm, Naïve Bayes, SVM with Linear Kernel function,
+and SVM with RBF Kernel function. The obtained results
+of the proposed system for the used techniques are 76.3%
+using discriminant analysis, 71.1% using KNN Algorithm, 76.1% using Naïve Bayes, 74.1% using SVM with
+Linear Kernel function, 74.1% using SVM with RBF Kernel function. Boruah et al. [24] have propose a transparent DT by eliminating the irrelevant rules and thereby
+enhancing the performance. Ravi et al. [25] have used
+fuzzy c means clustering and support vector machine for
+developing diabetes mellitus prediction. They have used a
+dataset that consists of 768 cases and the obtained result
+was 59.5%.
+
+Fig. 1 Four-phase framework of DiabeRules for rule-based decision making: from feature selection to weighted rule optimization
+Content courtesy of Springer Nature, terms of use apply. Rights reserved.
+
+Boruah and Biswas ﻿Health Information Science and Systems
+(2026) 14:19
+The proposed methodology of diabetes
+management using transparent rules: DiabeRules
+The proposed DiabeRules consists of 4 steps: FeatureSelection, Rule Generation, Weighted Rule Extraction
+Rating and Weighted Rule Optimization. Figure 1 depicts
+the proposed DiabeRules system’s framework. The Feature-Selection phase selects the best feature from the
+set and the rule generation step produces rule-set using
+DT; the Weighted Rule Extraction Rating step selects the
+transparent rules among the rules generated by DT using
+a scored function, the Weighted Rule Optimization step
+eliminates the irrelevant and ineffective rules.
+Feature‑selection
+The Feature-Selection step consists of the proposed feature selection technique Stochastic Hill Climbing with K
+nearest neighbor (SHCK), where Stochastic Hill climbing approach which is a heuristic search method is used
+to select the most relevant and prominent features. Until
+the predefined maximum iteration is reached the search
+for the features continues. The SHCK algorithm searches
+the best subset of features by removing the irrelevant
+features from the current feature set. For removing a
+feature, a fitness proportionate selection procedure with
+a probability to select a feature proportional to its score
+Page 4 of 15
+is used. Since DT is used as the learning model, so the
+score function used in the proposed algorithm is the
+overall accuracy. Each of the features are clustered into
+the number of classes for a particular dataset, thus setting the K value and a score value is assigned to them
+based on their distance from the centroid of the cluster to
+which they belong. The centroids of the K clusters are initially assigned with the random numbers chosen between
+the minimum and maximum value of the class label. If
+the class label is “0” and “1” then the random numbers
+for the centroids are chosen between 0 and 1. Similarly
+for continuous domain of class label the maximum and
+minimum value of the domain will be taken as range for
+generating the random numbers. This score value is used
+in the fitness proportionate selection procedure. If the
+new subset of feature improves the overall performance
+of the learning model, that change is retained. Else, it is
+discarded and then another neighbor in the feature space
+is taken into consideration. So as to reduce the deficiency
+of hill climbing due to incomplete search strategy SHCK
+is repeated with a predetermined maximum number of
+iterations. The feature selection procedure in algorithmic
+form is given below.
+
+Content courtesy of Springer Nature, terms of use apply. Rights reserved.
+
+Boruah and Biswas ﻿Health Information Science and Systems
+(2026) 14:19
+Algorithm 1 Stochastic hill climbing with K nearest neighbor (SHCK): a heuristic algorithm for efficient feature selection
+Content courtesy of Springer Nature, terms of use apply. Rights reserved.
+
+Page 5 of 15
+Boruah and Biswas ﻿Health Information Science and Systems
+(2026) 14:19
+The feature selection procedure of Algorithm 1 is
+depicted in Fig. 2 representing the systematic view of the
+feature selection process.
+Rule generation
+The DiabeRules system uses the processed data to generate the P-Rules (decision rules) for Diabetes. It uses C4.5
+algorithm [10] to generate the decision rules by calculating information gain ratio. The information gain ratio
+helps in choosing the feature at each node in the tree for
+splitting. The DT decision rules can be read from the root
+node following the decision node to the leaf node which
+represents the decision.
+Weighted rule extraction
+An effective model with very few decision rules explains
+the concept of transparency as well as the interpretability of the model. All the rules produced by the DT for
+each training set are not taken into consideration as all
+Page 6 of 15
+are not significant. For extracting a set of most promising transparent rule called Initial Transparent Rule Set,
+the rule selection step is divided into Weighted Evaluation and Rule Extraction phases. In the Weighted Evaluation phase, each of the rules is given a weight, termed
+as weightage of rule (WOR) [18]. The WOR score is
+computed as given by Eq. (1).
+ 
+
+
+
+IC
+CC
+CC
+CC − IC
++
+−
++ (1)
+WOR =
+CC + IC
+IC + 1
+CC
+RL
+where, WOR = Weightage of Rule, CC = Total samples
+correctly classified by a rule, IC = Total samples incorrectly classified a rule and RL = Rule Length.
+Once the weight is assigned to all the rules, then the
+highest weighted rule is extracted in the rule extraction
+phase, thus forming the Initial Transparent Ruleset.
+The rule selection algorithm is outlined in Algorithm 2.
+
+Fig. 2 SHCK feature selection framework with stochastic hill climbing and K-clustering
+Content courtesy of Springer Nature, terms of use apply. Rights reserved.
+
+Boruah and Biswas ﻿Health Information Science and Systems
+(2026) 14:19
+Page 7 of 15
+Algorithm 2 Rule extraction process based on highest weighted rules
+Weighted rule optimization
+All of the rules in the Initial Transparent Rule Set are
+not required for decision-making. As a result, the Initial
+Transparent Rule Set is reduced to improve transparency.
+
+To improve transparency and classification capacity,
+DiabeRules uses the Sequential Hill Climbing algorithm
+of TESR to remove redundant rule(s). The Intelligible
+Insight Rules is the result of this process. The following is
+the algorithmic approach for the final rule set:
+Content courtesy of Springer Nature, terms of use apply. Rights reserved.
+
+Boruah and Biswas ﻿Health Information Science and Systems
+(2026) 14:19
+Page 8 of 15
+Algorithm 3 Algorithmic process for deriving intelligible insight rules from initial rule set
+The Hill Climbing (HC) approach employed in Algorithm 3 is a sequential process that selects a rule for
+pruning in order. Algorithm 4 describes its algorithmic
+procedure.
+
+Algorithm 4 Rule pruning using sequential hill climbing in DiabeRules
+Content courtesy of Springer Nature, terms of use apply. Rights reserved.
+
+Boruah and Biswas ﻿Health Information Science and Systems
+(2026) 14:19
+Page 9 of 15
+Table 1 Detailed mapping of selected rules and their assigned weight values derived from the first cross-validation fold
+Rule No
+Rules
+WOR
+140.5
+1
+X2 ≤ 127.5 and X8 ≤ 28.5 and X6 ≤ 31.4 and X1 ≤ 2.5
+3
+X2 ≤ 127.5 and X8 ≤ 28.5 and X6 ≤ 31.4 and X1 > 2.5
+27.4
+4
+X2 ≤ 127.5 and X8 ≤ 28.5 and X6 > 31.4 and X2 ≤ 101.5 and X5 ≤ 34.0
+22.6
+5
+X2 ≤ 127.5 and X8 ≤ 28.5 and X6 > 31.4 and X2 ≤ 101.5 and X5 > 34.0 and X8 ≤ 22.5
+13.83
+6
+X2 ≤ 127.5 and X8 ≤ 28.5 and X6 > 31.4 and X2 ≤ 101.5 and X5 > 34.0 and X8 > 22.5
+7
+X2 ≤ 127.5 and X8 ≤ 28.5 and X6 > 31.4 and X2 > 101.5 and X5 ≤ 129.5 and X2 > 115.0
+8
+X2 ≤ 127.5 and X8 ≤ 28.5 and X6 > 31.4 and X2 > 101.5 and X5 > 129.5 and X1 ≤ 1.5
+7.38
+9
+X2 ≤ 127.5 and X8 ≤ 28.5 and X6 > 31.4 and X2 > 101.5 and X5 > 129.5 and X1 ≤ 1.5
+13.83
+10
+X2 ≤ 127.5 and X8 > 28.5 and X6 ≤ 26.35 and X6 ≤ 23.15
+11
+X2 ≤ 127.5 and X8 > 28.5 and X6 ≤ 26.35 and X6 > 23.15
+31.0
+22.0
+6.62
+13.75
+8.22
+12
+X2 ≤ 127.5 and X8 > 28.5 and X6 > 26.35 and X7 ≤ 0.625 and X2 ≤ 93.5 and X4 ≤ 29.5
+14
+X2 ≤ 127.5 and X8 > 28.5 and X6 > 26.35 and X7 ≤ 0.625 and X2 > 93.5 and X4 ≤ 27.5 and X8 ≤ 34.5
+15
+X2 ≤ 127.5 and X8 > 28.5 and X6 > 26.35 and X7 ≤ 0.625 and X2 > 93.5 and X4 ≤ 27.5 and X8 > 34.5
+3.67
+16
+X2 ≤ 127.5 and X8 > 28.5 and X6 > 26.35 and X7 ≤ 0.625 and X2 > 93.5 and X4 > 27.5 and X2 ≤ 104.0
+14.71
+17
+X2 ≤ 127.5 and X8 > 28.5 and X6 > 26.35 and X7 ≤ 0.625 and X2 > 93.5 and X4 > 27.5 and X2 > 104.0
+4.31
+18
+X2 ≤ 127.5 and X8 > 28.5 and X6 > 26.35 and X7 > 0.625 and X1 ≤ 7.5 and X5 ≤ 85.0
+2.75
+19
+X2 ≤ 127.5 and X8 > 28.5 and X6 > 26.35 and X7 > 0.625 and X1 ≤ 7.5 and X5 > 85.0
+3.41
+20
+X2 ≤ 127.5 and X8 > 28.5 and X6 > 26.35 and X7 > 0.625 and X1 > 7.5
+8.44
+3.46
+21
+X2 > 127.5 and X6 ≤ 29.95 and X2 ≤ 145.0 and X1 ≤ 1.5
+22
+X2 > 127.5 and X6 ≤ 29.95 and X2 ≤ 145.0 and X1 > 1.5 and X8 ≤ 46.0
+3.03
+23
+X2 > 127.5 and X6 ≤ 29.95 and X2 ≤ 145.0 and X1 > 1.5 and X8 > 46.0
+7.72
+24
+X2 > 127.5 and X6 ≤ 29.95 and X2 > 145.0 and X5 ≤ 14.5
+3.71
+25
+X2 > 127.5 and X6 ≤ 29.95 and X2 > 145.0 and X5 > 14.5
+4.67
+26
+X2 > 127.5 and X6 > 29.95 and X2 ≤ 157.5 and X7 ≤ 0.4 and X6 ≤ 41.8
+9.04
+27
+X2 > 127.5 and X6 > 29.95 and X2 ≤ 157.5 and X7 ≤ 0.4 and X6 > 41.8
+6.38
+28
+X2 > 127.5 and X6 > 29.95 and X2 ≤ 157.5 and X7 > 0.4 and X8 ≤ 30.0 and X2 ≤ 139.5
+2.27
+29
+X2 > 127.5 and X6 > 29.95 and X2 ≤ 157.5 and X7 > 0.4 and X8 ≤ 30.0 and X2 > 139.5
+2.27
+30
+X2 > 127.5 and X6 > 29.95 and X2 ≤ 157.5 and X7 > 0.4 and X8 > 30.0 and X6 ≤ 38.6
+26.67
+31
+X2 > 127.5 and X6 > 29.95 and X2 ≤ 157.5 and X7 > 0.4 and X8 > 30.0 and X6 > 38.6
+32
+X2 > 127.5 and X6 > 29.95 and X2 > 157.5 and X5 ≤ 252.0 and X8 ≤ 33.5
+33
+X2 > 127.5 and X6 > 29.95 and X2 > 157.5 and X5 ≤ 252.0 and X8 > 33.5 and X6 ≤ 35.3 and X7 ≤ 0.403
+34
+X2 > 127.5 and X6 > 29.95 and X2 > 157.5 and X5 ≤ 252.0 and X8 > 33.5 and X6 ≤ 35.3 and X7 > 0.403
+35
+X2 > 127.5 and X6 > 29.95 and X2 > 157.5 and X5 ≤ 252.0 and X8 > 33.5 and X6 > 35.3
+36
+X2 > 127.5 and X6 > 29.95 and X2 > 157.5 and X5 > 252.0
+Table 2 Initial transparent rule set derived from extracted
+highest WOR across 10 training folds
+Rule No
+Rules
+WOR
+1
+X2 ≤ 127.5 and X8 ≤ 28.5 and X6 ≤ 31.4 and X1 ≤ 2.5
+140.5
+2
+X2 ≤ 127.5 and X8 ≤ 28.5 and X6 ≤ 30.95 and X1 ≤ 2.5
+3
+X2 ≤ 143.5 and X6 ≤ 26.35 and X2 ≤ 114.5
+4
+16.0
+4.91
+29.8
+2.1
+7.15
+11.49
+2.67
+Table 3 Rule set along with WOR after 1st iteration
+obtained from sequential rule pruning of initial transparent rule set with accuracy impact
+Rule No
+Rules
+WOR
+130.5
+2
+X2 ≤ 127.5 and X8 ≤ 28.5 and X6 ≤ 30.95 and X1 ≤ 2.5
+130.5
+144.0
+3
+X2 ≤ 143.5 and X6 ≤ 26.35 and X2 ≤ 114.5
+144.0
+X2 ≤ 123.5 and X6 ≤ 27.35 and X2 ≤ 106.5
+136.5
+4
+X2 ≤ 123.5 and X6 ≤ 27.35 and X2 ≤ 106.5
+136.5
+5
+X2 ≤ 127.5 and X8 ≤ 28.5 and X6 ≤ 30.95 and X1 ≤ 2.5
+125.5
+5
+X2 ≤ 127.5 and X8 ≤ 28.5 and X6 ≤ 30.95 and X1 ≤ 2.5
+125.5
+6
+X2 ≤ 127.5 and X6 ≤ 26.45 and X6 > 22.95
+145.5
+6
+X2 ≤ 127.5 and X6 ≤ 26.45 and X6 > 22.95
+145.5
+7
+X2 ≤ 123.5 and X6 ≤ 26.45 and X2 ≤ 106.5
+135.0
+7
+X2 ≤ 123.5 and X6 ≤ 26.45 and X2 ≤ 106.5
+135.0
+8
+X2 ≤ 127.5 and X8 ≤ 28.5 and X6 ≤ 30.9 and X1 ≤ 2.5
+128.0
+8
+X2 ≤ 127.5 and X8 ≤ 28.5 and X6 ≤ 30.9 and X1 ≤ 2.5
+128.0
+9
+X2 ≤ 127.5 and X8 ≤ 28.5 and X6 ≤ 30.95 and X1 ≤ 2.5
+132.5
+9
+X2 ≤ 127.5 and X8 ≤ 28.5 and X6 ≤ 30.95 and X1 ≤ 2.5
+132.5
+10
+X2 ≤ 127.5 and X6 ≤ 26.45 and X2 ≤ 106.5
+144.5
+10
+X2 ≤ 127.5 and X6 ≤ 26.45 and X2 ≤ 106.5
+144.5
+Content courtesy of Springer Nature, terms of use apply. Rights reserved.
+
+Boruah and Biswas ﻿Health Information Science and Systems
+(2026) 14:19
+Table 4 Intelligible insight rules obtained after accuracybased rule pruning
+Rules
+X2 ≤ 143.5 and X6 ≤ 26.35 and X2 ≤ 114.5
+X2 ≤ 123.5 and X6 ≤ 27.35 and X2 ≤ 106.5
+X2 ≤ 127.5 and X6 ≤ 26.45 and X6 > 22.95
+X2 ≤ 127.5 and X6 ≤ 26.45 and X2 ≤ 106.5
+Page 10 of 15
+Experimental results and discussion
+The experimentation is done in PYTHON 3.7 version
+in Ubuntu environment. Ten-fold cross validation is
+performed to validate the effectiveness of the algorithm compared to the existing. To obtain an unbiased estimate of real-world performance, the dataset
+was ordered by patient index to approximate a temporal structure, with the first 80% of records used as the
+development cohort and the remaining 20% held out as
+a temporal test set that was completely excluded from
+all training, tuning, and preprocessing steps. Within
+Table 5 Performance metrics of DiabeRules compared to DT, RF, DT-SMOTE, KNN-DT, PMSGD, PEM, gradient boosting,
+XGBoost, and interpretable EBM (in %)
+Methods
+Accuracy (95% CI)
+Recall (95% CI)
+Precision (95% CI)
+F1 score (95% CI)
+Decision tree
+70.12 (67.62–2.62)
+73.25 (70.75–75.75)
+70.50 (68.00–73.00)
+71.84 (69.34–74.34)
+Random forest
+77.27 (75.27–79.27)
+76.14 (74.14–78.14)
+72.45 (70.45–74.45)
+74.25 (72.25–76.25)
+DT-SMOTE [20]
+76.40 (73.90–78.90)
+72.08 (69.58–74.58)
+70.84 (68.34–73.34)
+71.45 (68.95–73.95)
+KNN-DT [13]
+80.56 (78.76–82.36)
+80.15 (78.35–81.95)
+78.44 (76.64–80.24)
+79.29 (77.49–81.09)
+PMSGD [21]
+82.17 (80.67–83.67)
+80.04 (78.54–81.54)
+80.00 (78.50–81.50)
+80.02 (78.52–81.52)
+PEM [23]
+85.36 (84.36–86.36)
+82.41 (81.11–83.71)
+80.00 (78.50–81.50)
+81.19 (79.99–82.39)
+Gradient boosting
+88.55 (89.55–91.55)
+87.16 (85.96–88.36)
+83.90 (82.70–85.10
+85.49 (84.19–86.79)
+XGBoost
+87.50 (86.30–88.70)
+85.40 (84.20–86.60)
+82.81 (81.51–84.11)
+84.08 (82.78–85.38)
+Interpretable EBM
+88.87 (87.67–90.07)
+85.00 (83.70–86.30)
+85.72 (84.42–87.02)
+85.35 (84.05–86.65)
+DiabeRules
+89.23 (88.23–90.23)
+86.04 (85.04–87.04)
+83.81 (82.81–84.81)
+85.02 (84.02–86.02)
+Fig. 3 Comparative performance analysis of DiabeRules and baseline models
+Content courtesy of Springer Nature, terms of use apply. Rights reserved.
+
+Boruah and Biswas ﻿Health Information Science and Systems
+(2026) 14:19
+Page 11 of 15
+Table 6 Performance comparison between Pima and UCI diabetes 130-US hospitals datasets
+Method
+Decision tree
+Random forest
+DT-SMOTE
+KNN-DT
+PMSGD
+PEM
+Gradient boosting
+XGBoost
+Interpretable EBM
+DiabeRules
+Dataset
+Accuracy (95% CI)
+Recall (95% CI)
+Precision (95% CI)
+F1 Score (95% CI)
+Pima
+70.12 (67.62–72.62)
+73.25 (70.75–75.75)
+70.50 (68.00–73.00)
+71.84 (69.34–74.34)
+UCI diabetes 130-US hospitals
+73.42 (72.12–74.72)
+70.85 (69.55–72.15)
+69.14 (67.84–70.44)
+69.98 (68.68–71.28)
+Pima
+77.27 (75.27–79.27)
+76.14 (74.14–78.14)
+72.45 (70.45–74.45)
+74.25 (72.25–76.25)
+UCI diabetes 130-US hospitals
+81.76 (80.56–82.96)
+79.20 (78.00–80.40)
+77.48 (76.28–78.68)
+78.32 (77.12–79.52)
+Pima
+76.40 (73.90–78.90)
+72.08 (69.58–74.58)
+70.84 (68.34–73.34)
+71.45 (68.95–73.95)
+UCI diabetes 130-US hospitals
+79.05 (77.85–80.25)
+75.18 (73.98–76.38)
+74.40 (73.20–75.60)
+74.78 (73.58–75.98)
+Pima
+80.56 (78.76–82.36)
+80.15 (78.35–81.95)
+78.44 (76.64–80.24)
+79.29 (77.49–81.09)
+UCI diabetes 130-US hospitals
+83.44 (82.24–84.64)
+81.10 (79.90–82.30)
+79.85 (78.65–81.05)
+80.47 (79.27–81.67)
+Pima
+82.17 (80.67–83.67)
+80.04 (78.54–81.54)
+80.00 (78.50–81.50)
+80.02 (78.52–81.52)
+UCI diabetes 130-US hospitals
+84.62 (83.42–85.82)
+82.44 (81.24–83.64)
+81.90 (80.70–83.10)
+82.16 (80.96–83.36)
+Pima
+85.36 (84.36–86.36)
+82.41 (81.11–83.71)
+80.00 (78.50–81.50)
+81.19 (79.99–82.39)
+UCI diabetes 130-US hospitals
+87.25 (86.05–88.45)
+84.90 (83.70–86.10)
+83.12 (81.92–84.32)
+83.99 (82.79–85.19)
+Pima
+90.55 (89.55–91.55)
+87.16 (85.96–88.36)
+83.90 (82.70–85.10)
+85.49 (84.19–86.79)
+UCI diabetes 130-US hospitals
+91.14 (90.04–92.24)
+88.28 (87.18–89.38)
+85.92 (84.82–87.02)
+87.08 (85.98–88.18)
+Pima
+87.50 (86.30–88.70)
+85.40 (84.20–86.60)
+82.81 (81.51–84.11)
+84.08 (82.78–85.38)
+UCI Diabetes 130-US Hospitals
+89.52 (88.32–90.72)
+87.10 (85.90–88.30)
+84.66 (83.46–85.86)
+85.86 (84.66–87.06)
+Pima
+88.87 (87.67–90.07)
+85.00 (83.70–86.30)
+85.72 (84.42–87.02)
+85.35 (84.05–86.65)
+UCI diabetes 130-US hospitals
+90.01 (88.81–91.21)
+86.55 (85.35–87.75)
+86.38 (85.18–87.58)
+86.46 (85.26–87.66)
+Pima
+89.23 (88.23–90.23)
+86.04 (85.04–87.04)
+83.81 (82.81–84.81)
+85.02 (84.02–86.02)
+UCI diabetes 130-US hospitals
+90.84 (89.74–91.94)
+88.41 (87.31–89.51)
+85.74 (84.64–86.84)
+87.05 (85.95–88.15)
+the development cohort, a leakage-safe nested stratified
+tenfold cross-validation framework has been implemented, in which the outer loop estimated performance
+and the inner loop performed hyperparameter tuning
+and feature selection. Performance metrics—accuracy,
+precision, recall and F1 score have been reported with
+95% confidence intervals.
+Dataset description This study used the Pima Indian
+Diabetes dataset from the UCI machine learning repository. The dataset consists of 768 female patients that
+were tested for diabetes in Arizona, USA. The dataset
+comprises eight attributes (representing clinical diagnosis criteria) and one target class. There are 268 tested
+positive and 500 tested negative cases in the sample.
+The following are the attributes found in the dataset:
+X1 Number of times pregnant (Preg)
+X2 Plasma glucose concentration at 2 h in an oral
+glucose tolerance test (Plas)
+X3 Diastolic blood pressure (Pres)
+X4 Triceps skin fold thickness (Skin)
+X5 2 h serum insulin (Insu)
+X6 Body mass index (BMI)
+X7 Diabetes pedigree function (Pedi)
+X8 Age (Age)
+Demonstrative example
+Ten folds are used to split the data. In the first step
+of the proposed DiabeRules, the feature set is processed by the proposed SHCK, thus selecting 6 features
+namely, Number of times pregnant (Preg), Plasma glucose concentration at 2 h in an oral glucose tolerance
+test (Plas), 2 h serum insulin (Insu), body mass index
+(BMI), diabetes pedigree function (Pedi), age (Age). In
+the second step of DiabeRules, the hybrid DT is generated for each fold. In the third step, based on the
+score function, WOR each rule of every fold is given a
+score. Set of rules generated by the C4.5 DT algorithm
+for training set 1 along with their WOR value is shown
+below in Table 1.
+From this set of rules, the first highlighted rule has
+highest WOR value, thus this rule 1 is extracted from
+this fold. In the similar manner, the best rule of each
+fold is extracted in the rule extraction phase to form the
+Initial Transparent Rule Set which is shown in Table 2
+below and consists of top 10 from 10 training folds.
+The initial transparent rule set still contains some
+irrelevant rules and hence is pruned to obtain the final
+rule set. To obtain the Intelligible Insight Rules, the
+rules are pruned sequentially to check if the accuracy
+changes or not. If after removing a rule, the accuracy
+increases or there is no change in the accuracy then
+the rule is pruned permanently otherwise it is added
+back to the set. The process continues in a sequential
+Content courtesy of Springer Nature, terms of use apply. Rights reserved.
+
+Boruah and Biswas ﻿Health Information Science and Systems
+(2026) 14:19
+Table 7 Sequential search-based misclassification rates
+for reversed risk factor ranges (one attribute)
+Testing set
+X2 > 143.5 (%)
+X6 > 27.35 and
+X6 ≤ 22.95 (%)
+Testing 1
+64.80
+82.84
+Testing 2
+67.17
+85.43
+Testing 3
+65.24
+84.52
+Testing 4
+65.43
+84.59
+Testing 5
+66.52
+83.87
+Testing 6
+65.45
+82.93
+Testing 7
+67.91
+82.68
+Testing 8
+67.58
+84.08
+Testing 9
+65.57
+83.76
+Testing 10
+66.14
+86.71
+Average
+66.18
+84.14
+This is made bold to indicate it is the most significant in the performance
+manner till there is no rules to be pruned in the set. The
+Initial Transparent Rule Set which has a classification
+capacity of 83.60%. In Table 2, Rule no 1 is dropped and
+accuracy is computed. It is observed that the model
+produces better accuracy of 83.74% and hence rule no1
+is pruned (Table 3).
+Similarly, all other rules of the initial transparent rule
+set are analysed in a sequential manner and thus forming
+the intelligible Insight Rules Set as shown in Table 4.
+It is observed from the Table 4 that based on the 4 decision rules and 12 attributes (2 attributes with different
+ranges), diabetes can be controlled and manage if the values of the attributes are within the range.
+Comparison and performance
+The proposed system DiabeRules is compared with the
+existing models like Decision Tree, Random Forest, DTSMOTE [20], KNN-DT [13], PMSGD [21] and PEM [23]
+in terms of accuracy, recall, precision and F1 score. The
+comparison is shown in Table 5
+From Table 5, it is observed that the proposed DiabeRules has better performance in comparison to Decision Tree, Random Forest, DT-SMOTE, KNN-DT,
+PMSGD, PEM, Gradient Boosting, XGBoost, and Interpretable EBM. In case of both DT and RF, the classification performance is influenced by the presence of the
+irrelevant rules in the tree(s) and thus the performance
+of both of them are degraded. Although in other methods, DT-SMOTE, KNN-DT, PMSGD, PEM, Gradient
+Boosting, XGBoost, and Interpretable EBM, the dataset is pre-processed to remove the redundancies in the
+dataset, still the rules of the classifier DT were not analysed thus degrading its performances. In the proposed
+DiabeRules, the rules are generated from the hybrid DT
+and are scored and analysed to obtain a final transparent
+Page 12 of 15
+rule set thus enhancing the transparency and efficiency
+of the model. Better values of precision and recall mean
+number of false positives and number of false negatives
+is comparatively less and thus the prediction is accurate.
+From application point of view high value of recall is very
+much essential of medical purpose as the least number of
+predictions will be false negatives and thus precautionary
+measures can be taken at accurate time. Figure 3 gives
+the clear distinction of the comparisons for better understanding and visualisations.
+A transparent system with less decision rules makes
+a system user convincing and manageable to a greater
+extent especially in fields like medical and the expression of the decision rules into flowchart like representation makes the system explicitly understandable and
+closely resemblance to human reasoning. The proposed
+DiabeRules model has global and local comprehensibility of 4 and 12. On the other hand the global and local
+comprehensibility of Decision Tree, Random Forest, DTSMOTE, KNN-DT, PMSGD, PEM, Gradient Boosting,
+XGBoost, and Interpretable EBM are very high as they
+do not consider selecting of the best rules nor pruning of
+the rules to increase the performance and the transparency of the model. In case of Random Forest numerous
+numbers of DT are trained to generate the decision rules
+and thus both the global and local comprehensibility is
+very less because rules and features are more. Similarly
+in case of DT-SMOTE and KNN-DT, the rules generated
+by the DT are not processed or pruned and thus both the
+global and local comprehensibility is less in comparison
+to the proposed DiabeRules. In case of PMSGD, although
+SMOTE and genetic approaches are used to preprocess the data, yet the rules generated by the DT are not
+processed or pruned to increase the transparency of the
+model. Similarly in case of PEM, an ensemble approach
+Table 8 Sequential search-based misclassification rates
+for reversed risk factor ranges (two attribute)
+Testing set
+X2 > 143.5, X6 > 27.35
+and X6 ≤ 22.95 (%)
+Testing 1
+89.04
+Testing 2
+91.80
+Testing 3
+92.20
+Testing 4
+91.60
+Testing 5
+92.87
+Testing 6
+89.65
+Testing 7
+92.09
+Testing 8
+91.43
+Testing 9
+94.71
+Testing 10
+92.40
+Average
+91.78
+Content courtesy of Springer Nature, terms of use apply. Rights reserved.
+
+Boruah and Biswas ﻿Health Information Science and Systems
+(2026) 14:19
+Page 13 of 15
+Table 9 Prevention rate vs. number of controlled risk factors body mass index and plasma glucose along with their
+ranges
+Data set
+Attribute priority with ranges
+Diabetes
+Attribute priority (with attribute name)
+Misclassifi‑
+cation rate
+(%)
+X6 > 27.35 and X6 ≤ 22.95
+BMI > 27.35 and BMI ≤ 22.95
+84.14
+X2 > 143.5, X6 > 27.35 and X6 ≤ 22.95
+Plas > 143.5, BMI > 27.35 and BMI ≤ 22.95
+91.78
+is used to generate the decision rules and hence both the
+global and local comprehensibility are very less as compared to the proposed model DiabeRules. In the proposed DiabeRules, the rules generated by the DT are
+processed and pruned in the Rule selection and Rule
+pruning steps so as to generate a transparent decision
+making model with global and local comprehensibility of
+4 and 12; whereas in Decision Tree, Random Forest, DTSMOTE, KNN-DT, PMSGD, PEM, Gradient Boosting,
+XGBoost, and Interpretable EBM, the rules generated by
+the DT are not pruned and hence their transparency as
+well as their comprehensibility is less as compared to the
+proposed DiabeRules.
+To assess the external validity and practical applicability of the suggested model, we included the Diabetes
+130-US Hospitals dataset in addition to the Pima Indians Diabetes dataset. This dataset contains over 100,000
+hospital encounters collected from 130 U.S. hospitals
+and integrated delivery networks over a 10 year period.
+It offers a significantly more varied and diversified patient
+group than Pima and contains a rich range of demographic characteristics, diagnostic codes, laboratory
+measures, medication records, and hospitalization details
+(Table 6).
+All models perform consistently or better when tested
+on the bigger and more diverse UCI cohort, according
+to a comparative analysis of the Pima and UCI Diabetes
+130-US Hospitals datasets. Conventional models, such
+Random Forest and Decision Tree, exhibit discernible
+improvements in UCI, suggesting improved generalization in environments with greater feature diversity. With
+minor gains in Accuracy, Precision, and F1-Score on UCI,
+advanced learners like as Gradient Boosting, XGBoost,
+Interpretable EBM, and DiabeRules continue to perform
+well on both datasets. Together, these findings increase
+external validity by confirming that the suggested models do not overfit to the Pima dataset and continue to be
+reliable when used on a more varied real-world clinical
+population.
+Risk factor analysis
+The accuracy of the Intelligible Insight Rules is 89.23%.
+The global and local comprehensibility of the Intelligible
+Insight Rules Set is 4 and 12 (2 attributes with different
+ranges) respectively. From Table 4, it is observed that in
+the Intelligible Insight Rules, there are different ranges of
+same features. Therefore, the 4 rules are merged as given
+below:
+Merged Rule: if (X2 ≤ 143.5 and X6 ≤ 27.35 and
+X6 > 22.95) then class = 0
+The main objective of the proposed DiabeRules model
+is to identify the risk factors with ranges responsible
+for diabetes to control and manage diabetes to a great
+extent. To identify the risk factors from the optimised
+and merged (single) rule, the sequential search algorithm
+is used because the rule consists of 2 different attributes
+and if the value of this 2 attributes are within the given
+ranges, then a person belongs to a negative class, means
+he/she is not suffering from diabetes. The algorithm evaluates each risk factor independently. Each risk factor presents in the merged rule is taken under consideration by
+keeping the other risk factors inactive and the misclassification rate for the respective risk factor is calculated by
+reversing its range. The risk factor which produces highest average misclassification rate for negative class, when
+its range is reversed, is considered as the major risk factor. If more than one major risk factor needs to be identified, then the incremental Sequential Search process is
+iteratively executed to identify the intended number of
+major risk factors with ranges. Table 7 shows the rate of
+misclassified patterns when the range of a particular single risk factor is reversed.
+From the above table it is clearly visible that attribute
+X6 turns out to be the most promising one, as reversal
+of its range gives a high misclassification rate. So, if the
+scenario is to select single major factor responsible for
+diabetes, then X6 is selected as the one. Now for more
+than one major factors this method can be implemented
+incrementally. The misclassification rates are given in the
+Table 8 below:
+From Table 9, it is observed that that the prevention
+rate increases with the increase in the number of factors with its ranges. Though the performance increases
+with increase in factor(s) but it may be difficult to control more factor(s) within its range that are responsible
+for diabetes disease. However, from the analysis, even if
+Content courtesy of Springer Nature, terms of use apply. Rights reserved.
+
+Boruah and Biswas ﻿Health Information Science and Systems
+(2026) 14:19
+the range of one significant attribute is controlled, the
+disease can be managed significantly. Thus, it can be
+concluded that by controlling the feature X6, body mass
+index (BMI), within the range of 22.95 to 27.3, diabetes
+can be controlled and managed to a great extent. In addition to this, it can also be concluded that by controlling
+the feature X2, Plasma glucose and X6, body mass index
+(BMI) with the ranges less than 143.5 and within ranges
+22.95 to 27.3 diabetes can be controlled and managed to
+a great extent.
+
+Conclusion
+This paper offers a machine learning algorithm-based
+system named DiabeRules. The system finds the most
+important and understandable decision rules for recognising diabetes, allowing for the prevention of diabetes to some extent. The proposed approach is tested
+using a diabetic dataset from the University of California at Irvine’s repository. Using the DT algorithm,
+the DiabeRules system generates effective decision
+rules for determining the occurrence of diabetes. The
+decision rules are then scored, and the insignificant/
+irrelevant decision rules are pruned using a Sequential Hill Climbing technique to provide a reduced rule
+set. And finally, the algorithm identifies the major risk
+factor of diabetes disease. According to the results
+of the experiments, Diabetes can be significantly
+detected and controlled significantly by analysing 4
+decision rules which comprises of 2 factors namely
+Plasma glucose and BMI. The suggested system is
+compared to an existing system, and the findings
+reveal that the designed methodology is more effective in managing Diabetes than the existing method.
+The proposed method’s accuracy under tenfold crossvalidation was 89.23%. In order to guarantee comparability with relevant studies and to establish a fair
+foundation for benchmarking, this evaluation technique was selected. It should be noted, however, that
+utilizing the same dataset for feature selection, rule
+induction, and evaluation could result in overly optimistic estimations. Although tenfold cross-validation
+is still a commonly used technique in the area, nested
+cross-validation or independent test sets may be used
+in subsequent research to offer a more thorough evaluation of generalization performance.
+The presented work can be expanded upon by employing some pre-processing approaches to deal with the
+Diabetes dataset’s imbalanced nature and improve its
+usability. Optimising the decision rules and finding the
+significant rules can be accomplished with the help of
+additional algorithms.
+
+Page 14 of 15
+Declarations
+Competing interests
+The author declares that there are no known conflicts of interest associated
+with this publication and there has been no significant financial support for
+this work that could have influenced its outcome.
+Consent for publication
+I confirm that I have given due consideration to the protection of intellectual
+property associated with this work and that there are no impediments to
+publication, including the timing of publication, with respect to intellectual
+property. In so doing we confirm that I have followed the regulations of our
+institutions concerning intellectual property. The author also confirms being
+the sole contributor of this work.
+Author details
+1
+Faculty of Computer Technology, Assam Down Town University, Sankar
+Madhab Path, Gandhi Nagar, Panikhaiti, Guwahati, Assam 781026, India. 2 Computer Science and Engineering Department, National Institute of Technology
+Silchar, Silchar 788010, India.
+Received: 3 August 2024 Accepted: 14 December 2025
+References
+1. Kloppel G, Lohr M, Habich K, Oberholzer M, Heitz PU. Islet pathology and
+the pathogenesis of type 1 and type 2 diabetes mellitus revisited. Pathol
+Immunopathol Res. 1985;4(2):110–25.
+2. International Diabetes Federation—facts & figures. 2021. https://​www.​idf.​
+org/​about​diabe​tes/​what-​is-​diabe​tes/​facts-​figur​es.​html. Accessed 24 Dec
+2021.
+3. Huang CL, Chen MC, Wang CJ. Credit scoring with a data mining approach based on support vector machines. Expert Syst Appl.
+2007;33(4):847–56. https://​doi.​org/​10.​1016/j.​eswa.​2006.​07.​007.
+4. Chaki J, Thillai Ganesh S, Cidham SK, Ananda Theertan S. Machine learning and artificial intelligence-based diabetes mellitus detection and
+self-management: a systematic review. J King Saud Univ Comput Inf Sci.
+2020;30:3204.
+5. Contreras I, Vehi J. Artificial intelligence for diabetes management and
+decision support: literature review. J Med Internet Res. 2018;20(5):e10775.
+6. Bellazzi R, Ferrazzi F, Sacchi L. Predictive data mining in clinical medicine:
+a focus on selected methods and applications. WIRES Data Min Knowl
+Discov. 2011;1(5):416–30.
+7. Upadhyaya S, Farahmand K, Baker-Demaray T. Comparison of NN and
+LR classifiers in the context of screening Native American elders with
+diabetes. Expert Syst Appl. 2013;40(15):5830–8. https://​doi.​org/​10.​1016/j.​
+eswa.​2013.​05.​012.
+8. Liao S-H, Chu P-H, Hsiao P-Y. Data mining techniques and applications–a
+decade review from 2000 to 2011. Expert Syst Appl. 2012;39(12):11303–
+11. https://​doi.​org/​10.​1016/j.​eswa.​2012.​02.​063.
+9. Biswas SK, Chowdhury SR, Chakraborty M, Purkayastha B. A medical
+expert system to identify major factor of diseases using P-Rules. In: 2018
+international conference on intelligent autonomous systems, ICoIAS.
+2018. https://​doi.​org/​10.​1109/​ICoIAS.​2018.​84938​17.
+10. Asri H, Mousannif H, Al Moatassime H, Nole T. Using machine learning
+algorithms for breast cancer risk prediction and diagnosis. Procedia
+Comput Sci. 2016;83:1064–9.
+11. Deepika M, Kalaiselvi K. A empirical study on disease diagnosis using data
+mining techniques. In: Proceedings of the international conference on
+inventive communication and computational technologies. ICICCT; 2018.
+https://​doi.​org/​10.​1109/​ICICCT.​2018.​84731​85.
+12. Yue W, Wang Z, Chen H, Payne A, Liu X. Machine learning with applications in breast cancer diagnosis and prognosis. Designs. 2018;2:13.
+13. Kadhm MS, Ghindawi IW, Mhawi DE. An accurate diabetes prediction system based on K-means clustering and proposed classification approach.
+Int J Appl Eng Res. 2018;13(6):4038–41.
+
+Content courtesy of Springer Nature, terms of use apply. Rights reserved.
+
+Boruah and Biswas ﻿Health Information Science and Systems
+(2026) 14:19
+14. Patil BM, Joshi RC, Toshniwal D. Hybrid prediction model for Type-2
+diabetic patients. Expert Syst Appl. 2010;37:8102–8.
+15. Khandegar A. Khushbu Pawar diagnosis of diabetes mellitus using PCA,
+neural network and cultural algorithm. Int J Digital Appl Contemp Res.
+2017;5(6):1.
+16. Song Y, Jiye L, Jing L, Xingwang Z. An efficient instance selection
+algorithm for k nearest neighbour regression. Neurocomputing.
+2017;251:26–34.
+17. Meng XH, Huang YX, Rao DP, Zhang Q, Liu Q. Comparison of three data
+mining models for predicting diabetes or prediabetes by risk factors.
+Kaohsiung J Med Sci. 2013;29(2):93–9.
+18. Rabina E, Chopra EA. Diabetes prediction by supervised and unsupervised learning with feature selection. Int J Adv Res. 2016;2(5):2454–3132.
+19. Joshi TN, Chawan PN. Diabetes prediction using machine learning techniques. Int J Eng Res Appl. 2018;8(1):09–13.
+20. Mirza S, Mittal S, Zaman M. Decision support predictive model for
+prognosis of diabetes using SMOTE and decision tree. Int J Appl Eng Res.
+2018;13(11):9277–82.
+21. Azad C, Bhushan B, Sharma R, Shankar A, Singh KK, Khamparia A. Prediction model using SMOTE, genetic algorithm and decision tree (PMSGD)
+for classification of diabetes mellitus. Multimedia Syst. 2021. https://​doi.​
+org/​10.​1007/​s00530-​021-​00817-2.
+
+Page 15 of 15
+22. Alehegn M, Joshi R, Mulay P. Analysis and prediction of diabetes
+mellitus using machine learning algorithm. Int J Pure Appl Math.
+2018;118(9):871–8.
+23. Krishnaveni G, Sudha T. A novel technique to predict diabetic disease
+using data mining classification techniques. In: International conference
+on innovative applications in engineering and information technology
+(ICIAEIT-2017). 2017. p. 5–11.
+24. Boruah AB, Biswas SK, Bandyopadhyay S. Rule extraction from decision
+tree: transparent expert system of rules. Concurr Comput Pract Exp. 2022.
+https://​doi.​org/​10.​1002/​cpe.​6935.
+25. Ravi S, Smt T. Prognosis of diabetes using data mining approach-fuzzy
+C means clustering and support vector machine. Int J Comput Trends
+Technol (IJCTT). 2014;11(2):94–8.
+Publisher’s Note Springer Nature remains neutral with regard to
+jurisdictional claims in published maps and institutional affiliations.
+Springer Nature or its licensor (e.g. a society or other partner) holds exclusive
+rights to this article under a publishing agreement with the author(s) or other
+rightsholder(s); author self-archiving of the accepted manuscript version of
+this article is solely governed by the terms of such publishing agreement and
+applicable law.
+
+Content courtesy of Springer Nature, terms of use apply. Rights reserved.
+
+Terms and Conditions
+Springer Nature journal content, brought to you courtesy of Springer Nature Customer Service Center GmbH (“Springer Nature”).
+Springer Nature supports a reasonable amount of sharing of research papers by authors, subscribers and authorised users (“Users”), for smallscale personal, non-commercial use provided that all copyright, trade and service marks and other proprietary notices are maintained. By
+accessing, sharing, receiving or otherwise using the Springer Nature journal content you agree to these terms of use (“Terms”). For these
+purposes, Springer Nature considers academic use (by researchers and students) to be non-commercial.
+These Terms are supplementary and will apply in addition to any applicable website terms and conditions, a relevant site licence or a personal
+subscription. These Terms will prevail over any conflict or ambiguity with regards to the relevant terms, a site licence or a personal subscription
+(to the extent of the conflict or ambiguity only). For Creative Commons-licensed articles, the terms of the Creative Commons license used will
+apply.
+We collect and use personal data to provide access to the Springer Nature journal content. We may also use these personal data internally within
+ResearchGate and Springer Nature and as agreed share it, in an anonymised way, for purposes of tracking, analysis and reporting. We will not
+otherwise disclose your personal data outside the ResearchGate or the Springer Nature group of companies unless we have your permission as
+detailed in the Privacy Policy.
+While Users may use the Springer Nature journal content for small scale, personal non-commercial use, it is important to note that Users may
+not:
+1. use such content for the purpose of providing other users with access on a regular or large scale basis or as a means to circumvent access
+control;
+2. use such content where to do so would be considered a criminal or statutory offence in any jurisdiction, or gives rise to civil liability, or is
+otherwise unlawful;
+3. falsely or misleadingly imply or suggest endorsement, approval , sponsorship, or association unless explicitly agreed to by Springer Nature in
+writing;
+4. use bots or other automated methods to access the content or redirect messages
+5. override any security feature or exclusionary protocol; or
+6. share the content in order to create substitute for Springer Nature products or services or a systematic database of Springer Nature journal
+content.
+In line with the restriction against commercial use, Springer Nature does not permit the creation of a product or service that creates revenue,
+royalties, rent or income from our content or its inclusion as part of a paid for service or for other commercial gain. Springer Nature journal
+content cannot be used for inter-library loans and librarians may not upload Springer Nature journal content on a large scale into their, or any
+other, institutional repository.
+These terms of use are reviewed regularly and may be amended at any time. Springer Nature is not obligated to publish any information or
+content on this website and may remove it or features or functionality at our sole discretion, at any time with or without notice. Springer Nature
+may revoke this licence to you at any time and remove access to any copies of the Springer Nature journal content which have been saved.
+To the fullest extent permitted by law, Springer Nature makes no warranties, representations or guarantees to Users, either express or implied
+with respect to the Springer nature journal content and all parties disclaim and waive any implied warranties or warranties imposed by law,
+including merchantability or fitness for any particular purpose.
+Please note that these rights do not automatically extend to content, data or other material published by Springer Nature that may be licensed
+from third parties.
+If you would like to use or distribute our Springer Nature journal content to a wider audience or on a regular basis or in any other manner not
+expressly permitted by these Terms, please contact Springer Nature at
+onlineservice@springernature.com
+
