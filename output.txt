@@ -5,3 +5,10 @@ Final Model Metrics (Our Implementation)
   Recall    : 95.52%
   Precision : 78.53%
   F1 Score  : 86.20%
+
+Final Model Metrics (Our Implementation + SMOTE)
+============================================================
+  Accuracy  : 93.23%
+  Recall    : 84.33%
+  Precision : 95.76%
+  F1 Score  : 89.68%
