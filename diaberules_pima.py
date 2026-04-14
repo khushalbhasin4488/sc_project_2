@@ -262,11 +262,11 @@ def evaluate_development_cv(X_dev, y_dev):
 
         print(f"  Fold {fold_idx+1}: Acc={acc*100:.2f}% | Rules={len(final_rules)} | TrainAcc={train_acc*100:.2f}%")
 
-    print("\nDevelopment CV Summary")
-    print(f"  Accuracy  : {np.mean(accs)*100:.2f}% ± {np.std(accs)*100:.2f}")
-    print(f"  Recall    : {np.mean(recs)*100:.2f}% ± {np.std(recs)*100:.2f}")
-    print(f"  Precision : {np.mean(precs)*100:.2f}% ± {np.std(precs)*100:.2f}")
-    print(f"  F1 Score  : {np.mean(f1s)*100:.2f}% ± {np.std(f1s)*100:.2f}")
+    # print("\nDevelopment CV Summary")
+    # print(f"  Accuracy  : {np.mean(accs)*100:.2f}% ± {np.std(accs)*100:.2f}")
+    # print(f"  Recall    : {np.mean(recs)*100:.2f}% ± {np.std(recs)*100:.2f}")
+    # print(f"  Precision : {np.mean(precs)*100:.2f}% ± {np.std(precs)*100:.2f}")
+    # print(f"  F1 Score  : {np.mean(f1s)*100:.2f}% ± {np.std(f1s)*100:.2f}")
 
 def display_rules(rules):
     print("\n=== Intelligible Insight Rules ===")
