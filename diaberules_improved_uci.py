@@ -281,12 +281,19 @@ def run_paper_style(X, y, feature_names):
     for fi, (tr, _) in enumerate(skf.split(X, y)):
         Xt, yt = X[tr], y[tr]
         
-        # Apply SMOTE to handle class imbalance on training data only
-        try:
-            smote = SMOTE(random_state=RANDOM_STATE)
-            Xt_res, yt_res = smote.fit_resample(Xt, yt)
-        except Exception as e:
-            print(f"  [Fold {fi+1}] SMOTE failed ({e}), using raw data")
+        # If the dataset is already well-balanced (minority/majority ratio >= 0.8), skip it.
+        n0_tr = int(np.sum(yt == 0))
+        n1_tr = int(np.sum(yt == 1))
+        current_ratio = n1_tr / max(n0_tr, 1)
+        
+        if current_ratio < 0.8:
+            try:
+                smote = SMOTE(random_state=RANDOM_STATE)
+                Xt_res, yt_res = smote.fit_resample(Xt, yt)
+            except Exception as e:
+                print(f"  [Fold {fi+1}] SMOTE failed ({e}), using raw data")
+                Xt_res, yt_res = Xt, yt
+        else:
             Xt_res, yt_res = Xt, yt
         
         # Run standard sequential SHCK (using max_iter=30 for UCI speeds)
