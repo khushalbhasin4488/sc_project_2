@@ -1,5 +1,5 @@
 """
-DiabeRules — Corrected Implementation (Final v7)
+DiabeRules  
 Paper: "DiabeRules: A Transparent Rule-Based Expert System for Managing Diabetes"
 
 Key findings from cross-verification:

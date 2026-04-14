@@ -1,41 +1,36 @@
 """
-DiabeRules — UCI Hospital Dataset (Improved v2)
-Paper: "DiabeRules: A Transparent Rule-Based Expert System for Managing Diabetes"
+DiabeRules — UCI Hospital Dataset (v3 — Balanced Fix)
 
-Root-cause fixes over the original UCI implementation:
+Problem diagnosis from v2 vs original:
+  Original v1:  Acc=62.76, Rec=45.72, Prec=63.29, F1=53.09  ← low recall, biased to class-0
+  Improved v2:  Acc=53.87, Rec=89.97, Prec=49.98, F1=64.26  ← overcorrected, biased to class-1
 
-1. SMOTE-ENN replaces plain SMOTE.
-   Plain SMOTE on one-hot encoded data interpolates between 0 and 1, producing
-   non-integer values for binary columns (e.g., gender_Male = 0.43). This
-   corrupts the DT split logic and produces meaningless rules. SMOTE-ENN
-   oversamples then cleans noisy borderline samples, giving cleaner leaves.
+Root causes of v2 overcorrection:
+  1. SMOTE-ENN was too aggressive — it removed too many majority-class samples,
+     making the resampled training data heavily skewed toward class-1. On a 100k
+     dataset with many borderline samples, ENN's cleaning step removes a large
+     fraction of class-0, flipping the imbalance direction.
+  2. LAMBDA_MINORITY=0.3 in WOR stacked on top of already-oversampled data,
+     double-penalising class-0 rules at scoring time.
+  3. F1-based pruning (with binary F1 defaulting to class-1) retained class-1
+     rules aggressively even when precision was collapsing.
 
-2. F1-based pruning replaces accuracy-based pruning.
-   The UCI readmission dataset is ~54% class-0. Accuracy-based pruning accepts
-   any rule removal that keeps accuracy flat, which systematically prunes class-1
-   rules until the model just predicts "No Readmission" for everything.
-   F1 catches this because it weights recall of the positive class.
-
-3. Minority-class weighted WOR.
-   The original WOR formula rewards large, clean majority-class leaves.
-   Adding lambda * (CC_minority / total_minority) gives class-1 rules a
-   scoring bonus proportional to their minority-recall contribution.
-
-4. Majority-vote SHCK (multiple restarts).
-   ~300+ one-hot features make single-run SHCK highly unstable — a bad
-   random seed can drop clinically important features. Running 5 restarts
-   and keeping only features selected by >50% of them gives stable subsets.
-
-5. Dataset-adaptive default class per fold.
-   Computed from unmatched training samples, not the global majority.
-   On UCI this matters because class balance varies across folds.
-
-6. MCC and AUC-ROC added to metrics.
-   These are robust to the class imbalance that makes accuracy misleading.
-
-7. max_depth capped at 5 (down from 6).
-   With SMOTE-ENN cleaning the boundary, shallower trees produce fewer
-   but higher-quality rules. This also speeds up the 100k-record pipeline.
+Fixes in v3:
+  1. Replace SMOTE-ENN with BorderlineSMOTE.
+     BorderlineSMOTE only synthesises near the decision boundary — it doesn't
+     clean majority samples, so the class ratio stays controlled. This avoids
+     the ENN over-removal problem on large datasets.
+  2. Tune sampling_strategy explicitly to a target ratio (default 0.6) instead
+     of full 1:1 balance. This prevents the hard flip to class-1 dominance.
+  3. Replace binary F1 pruning with macro-F1 pruning.
+     Macro-F1 averages F1 across both classes equally, so the pruner must
+     maintain performance on BOTH classes — it can't just maximise class-1 recall.
+  4. Set LAMBDA_MINORITY=0.1 (down from 0.3).
+     Since BorderlineSMOTE already handles imbalance at data level, the WOR
+     bonus only needs a small nudge, not a large correction.
+  5. Adaptive default class from unmatched training samples (kept from v2).
+  6. Majority-vote SHCK (kept from v2).
+  7. MCC + AUC-ROC reporting (kept from v2).
 """
 
 from pathlib import Path
@@ -49,7 +44,7 @@ from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     matthews_corrcoef, roc_auc_score,
 )
-from imblearn.combine import SMOTEENN
+from imblearn.over_sampling import BorderlineSMOTE
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -59,19 +54,29 @@ np.random.seed(RANDOM_STATE)
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 
-BASE_DIR    = Path(__file__).resolve().parent
-DATA_PATH   = BASE_DIR / "uci_dataset" / "diabetic_data.csv"
+BASE_DIR  = Path(__file__).resolve().parent
+DATA_PATH = BASE_DIR / "uci_dataset" / "diabetic_data.csv"
 ID_MAP_PATH = BASE_DIR / "uci_dataset" / "IDS_mapping.csv"
 
-TOP_N_RULES_PER_FOLD     = 10    # Top N rules extracted per class per fold
-MIN_SAMPLES_LEAF         = 50    # DT leaf size (larger = fewer, cleaner rules)
-MAX_DEPTH                = 5     # Shallower tree → fewer but higher-quality rules
-SHCK_MAX_ITER            = 30    # Hill climbing iterations per restart
-SHCK_N_RESTARTS          = 5     # Number of SHCK restarts for majority-vote
-LAMBDA_MINORITY          = 0.3   # Weight for minority-class recall term in WOR
-HIGH_MISSING_COLUMNS     = ["weight", "payer_code", "medical_specialty"]
-ID_COLUMNS               = ["encounter_id", "patient_nbr"]
-LOW_VARIANCE_THRESHOLD   = 0.995
+TOP_N_RULES_PER_FOLD   = 10    # Top N rules extracted per class per fold
+MIN_SAMPLES_LEAF       = 50    # DT leaf size
+MAX_DEPTH              = 5     # Shallower tree → fewer but cleaner rules
+SHCK_MAX_ITER          = 30    # Hill climbing iterations per restart
+SHCK_N_RESTARTS        = 5     # Number of SHCK restarts for majority-vote
+LAMBDA_MINORITY        = 0.1   # Small WOR bonus for minority class (v2 was 0.3, too high)
+SAMPLING_STRATEGY      = 0.6   # Target minority/majority ratio after resampling
+                                # 0.6 means minority becomes 60% of majority count
+                                # keeps data realistic without hard-flipping balance
+
+HIGH_MISSING_COLUMNS   = ["weight", "payer_code", "medical_specialty"]
+ID_COLUMNS             = ["encounter_id", "patient_nbr"]
+LOW_VARIANCE_THRESHOLD = 0.995
+
+_NUMERIC_FEATURE_NAMES = {
+    "time_in_hospital", "num_lab_procedures", "num_procedures",
+    "num_medications", "number_outpatient", "number_emergency",
+    "number_inpatient", "number_diagnoses", "age_midpoint",
+}
 
 # ─── 1. Load & Preprocess ────────────────────────────────────────────────────
 
@@ -184,10 +189,10 @@ def load_uci_data():
         columns=["admission_type_id", "discharge_disposition_id", "admission_source_id"]
     )
 
-    df["age_midpoint"]  = df["age"].apply(age_band_to_midpoint)
-    df["diag_1_group"]  = df["diag_1"].apply(categorize_diagnosis)
-    df["diag_2_group"]  = df["diag_2"].apply(categorize_diagnosis)
-    df["diag_3_group"]  = df["diag_3"].apply(categorize_diagnosis)
+    df["age_midpoint"] = df["age"].apply(age_band_to_midpoint)
+    df["diag_1_group"] = df["diag_1"].apply(categorize_diagnosis)
+    df["diag_2_group"] = df["diag_2"].apply(categorize_diagnosis)
+    df["diag_3_group"] = df["diag_3"].apply(categorize_diagnosis)
     df = df.drop(columns=["age", "diag_1", "diag_2", "diag_3"])
 
     df, dropped_lv = drop_low_variance_columns(df, protected_columns={"Outcome"})
@@ -200,7 +205,6 @@ def load_uci_data():
     categorical_cols = [
         c for c in df.columns if c not in numeric_cols + ["Outcome"]
     ]
-
     for col in numeric_cols:
         df[col] = pd.to_numeric(df[col], errors="coerce")
         df[col] = df[col].fillna(df[col].median())
@@ -212,22 +216,15 @@ def load_uci_data():
     y    = df["Outcome"].astype(int).values
     feature_names = list(X_df.columns)
 
-    print(f"Dataset       : {len(df)} samples | "
-          f"{len(df.columns)} cols before encoding | "
-          f"{X.shape[1]} after one-hot")
+    print(f"Dataset       : {len(df)} samples | {X.shape[1]} features after encoding")
     print(f"Readmit dist  : {readmit_counts}")
     print(f"Binary classes: 0={np.sum(y==0)}, 1={np.sum(y==1)}")
-    print(f"Dropped (missing)    : {HIGH_MISSING_COLUMNS}")
-    print(f"Dropped (low-var)    : {dropped_lv}")
+    print(f"Dropped (high-missing) : {HIGH_MISSING_COLUMNS}")
+    print(f"Dropped (low-variance) : {dropped_lv}")
     return X, y, feature_names
 
 
 X, y, feature_names = load_uci_data()
-_NUMERIC_FEATURE_NAMES = {
-    "time_in_hospital", "num_lab_procedures", "num_procedures",
-    "num_medications", "number_outpatient", "number_emergency",
-    "number_inpatient", "number_diagnoses", "age_midpoint",
-}
 
 # ─── 2. SHCK Feature Selection (majority-vote restarts) ──────────────────────
 
@@ -245,7 +242,6 @@ def compute_cluster_scores(X_sub, y, K):
 
 
 def _single_shck_run(X_train, y_train, seed):
-    """One SHCK run with a given random seed."""
     rng = np.random.RandomState(seed)
     n   = X_train.shape[1]
     F   = list(range(n))
@@ -262,13 +258,13 @@ def _single_shck_run(X_train, y_train, seed):
     for _ in range(SHCK_MAX_ITER):
         if len(F) <= 3:
             break
-        sv = compute_cluster_scores(X_train[:, F], y_train, K)
-        t  = np.sum(sv)
-        p  = sv / t if t > 0 else np.ones(len(F)) / len(F)
-        idx   = rng.choice(len(F), p=p)
-        rm    = F[idx]
+        sv  = compute_cluster_scores(X_train[:, F], y_train, K)
+        t   = np.sum(sv)
+        p   = sv / t if t > 0 else np.ones(len(F)) / len(F)
+        idx = rng.choice(len(F), p=p)
+        rm  = F[idx]
         F_new = [f for f in F if f != rm]
-        dt2   = DecisionTreeClassifier(
+        dt2 = DecisionTreeClassifier(
             criterion="entropy", random_state=seed,
             min_samples_leaf=MIN_SAMPLES_LEAF, max_depth=MAX_DEPTH,
         )
@@ -282,24 +278,15 @@ def _single_shck_run(X_train, y_train, seed):
 
 
 def shck_majority_vote(X_train, y_train):
-    """
-    Run SHCK N times with different seeds and keep features selected by
-    more than half the restarts.  This is critical on high-dimensional
-    one-hot data (~300+ features) where a single run is unstable.
-    """
     n           = X_train.shape[1]
     vote_counts = np.zeros(n, dtype=int)
-
     for restart in range(SHCK_N_RESTARTS):
-        seed = RANDOM_STATE + restart * 17   # deterministic but distinct seeds
+        seed = RANDOM_STATE + restart * 17
         sel  = _single_shck_run(X_train, y_train, seed)
         for f in sel:
             vote_counts[f] += 1
-
     threshold = SHCK_N_RESTARTS / 2
     selected  = [i for i in range(n) if vote_counts[i] > threshold]
-
-    # Safety: always keep at least 3 features
     if len(selected) < 3:
         selected = list(np.argsort(vote_counts)[::-1][:3])
     return selected
@@ -328,24 +315,18 @@ def rule_matches(conds, sample):
 
 
 def extract_rules_from_dt(dt, feat_idx):
-    """
-    Extract leaf rules with correct CC/IC counts via n_node_samples.
-    Also stores the per-class leaf counts so compute_wor can access
-    the minority-class CC separately.
-    """
     tree_    = dt.tree_
     loc2glob = {i: feat_idx[i] for i in range(len(feat_idx))}
     rules    = []
 
     def recurse(node, conds):
         if tree_.feature[node] == _tree.TREE_UNDEFINED:
-            lv       = tree_.value[node][0]          # shape: (n_classes,)
-            n_samp   = tree_.n_node_samples[node]
-            pc       = int(np.argmax(lv))
-            CC       = int(round(lv[pc] * n_samp))
-            IC       = n_samp - CC
-            # Minority class (class 1) count in this leaf
-            cc_min   = int(round(lv[1] * n_samp)) if len(lv) > 1 else 0
+            lv     = tree_.value[node][0]
+            n_samp = tree_.n_node_samples[node]
+            pc     = int(np.argmax(lv))
+            CC     = int(round(lv[pc] * n_samp))
+            IC     = n_samp - CC
+            cc_min = int(round(lv[1] * n_samp)) if len(lv) > 1 else 0
             rules.append({
                 "conditions"     : conds.copy(),
                 "predicted_class": pc,
@@ -367,17 +348,9 @@ def extract_rules_from_dt(dt, feat_idx):
 
 def compute_wor(CC, IC, RL, total_minority, CC_minority, lam=LAMBDA_MINORITY):
     """
-    Enhanced WOR with minority-class recall bonus.
-
-    Original formula:
-        WOR = (CC-IC)/(CC+IC) + CC/(IC+1) - IC/CC + CC/RL
-
-    Addition:
-        + lambda * (CC_minority / total_minority)
-
-    The bonus rewards rules that correctly classify minority (readmitted)
-    patients, preventing the scorer from always favouring easy no-readmission
-    rules on this imbalanced dataset.
+    WOR with a small minority-class recall bonus (lambda=0.1).
+    Kept small because BorderlineSMOTE already handles imbalance at data
+    level — we don't want to double-penalise class-0 rules here.
     """
     if CC <= 0:
         return -9999.0
@@ -387,11 +360,9 @@ def compute_wor(CC, IC, RL, total_minority, CC_minority, lam=LAMBDA_MINORITY):
 
 
 def extract_top_rules(rules, top_n, total_minority):
-    """Return top N rules per class ranked by enhanced WOR."""
     for r in rules:
         r["WOR"] = compute_wor(
-            r["CC"], r["IC"], r["RL"],
-            total_minority, r["CC_minority"],
+            r["CC"], r["IC"], r["RL"], total_minority, r["CC_minority"],
         )
     c0 = sorted(
         [r for r in rules if r["predicted_class"] == 0],
@@ -407,81 +378,69 @@ def extract_top_rules(rules, top_n, total_minority):
 # ─── 4. Prediction ───────────────────────────────────────────────────────────
 
 def predict_with_rules(ruleset, X, default_class=0):
-    """First-match rule application; unmatched → default_class."""
     preds     = np.full(X.shape[0], default_class, dtype=int)
     unmatched = np.ones(X.shape[0], dtype=bool)
     for rule in ruleset:
         if not unmatched.any():
             break
-        mask           = rule_match_mask(rule, X) & unmatched
-        preds[mask]    = rule["predicted_class"]
+        mask            = rule_match_mask(rule, X) & unmatched
+        preds[mask]     = rule["predicted_class"]
         unmatched[mask] = False
     return preds
 
 
 def predict_with_masks(ruleset, rule_masks, n_samples, default_class=0):
-    """Faster variant using precomputed boolean masks."""
     preds     = np.full(n_samples, default_class, dtype=int)
     unmatched = np.ones(n_samples, dtype=bool)
     for rule, mask in zip(ruleset, rule_masks):
         if not unmatched.any():
             break
-        apply          = mask & unmatched
-        preds[apply]   = rule["predicted_class"]
+        apply           = mask & unmatched
+        preds[apply]    = rule["predicted_class"]
         unmatched[apply] = False
     return preds
 
 
 def compute_default_class(ruleset, X_train, y_train):
-    """
-    Default class = majority label of unmatched training samples.
-    Falls back to global majority if all samples match a rule.
-    This is adaptive per fold rather than using the global class distribution.
-    """
+    """Adaptive default: majority label among unmatched training samples."""
     if not ruleset:
         return int(np.bincount(y_train).argmax())
-    unmatched_mask   = ~np.any(
-        np.column_stack([rule_match_mask(r, X_train) for r in ruleset]), axis=1
-    )
-    unmatched_labels = y_train[unmatched_mask]
-    if len(unmatched_labels) > 0:
-        return int(Counter(unmatched_labels).most_common(1)[0][0])
+    cols          = np.column_stack([rule_match_mask(r, X_train) for r in ruleset])
+    unmatched_lbl = y_train[~np.any(cols, axis=1)]
+    if len(unmatched_lbl) > 0:
+        return int(Counter(unmatched_lbl).most_common(1)[0][0])
     return int(np.bincount(y_train).argmax())
 
 
-# ─── 5. F1-Based Pruning ─────────────────────────────────────────────────────
+# ─── 5. Macro-F1 Pruning ─────────────────────────────────────────────────────
 
-def ruleset_f1(rs, masks, y, default_class=0):
+def ruleset_macro_f1(rs, masks, y, default_class=0):
     """
-    Compute F1 on the current rule set.
+    Macro-averaged F1 as the pruning objective.
 
-    Why F1 instead of accuracy:
-    UCI readmission is ~54/46 split. Accuracy stays high even when the model
-    ignores all class-1 rules (predicts "No Readmission" for everything).
-    F1 penalises the recall collapse that accuracy misses.
+    Why macro and not binary F1:
+    - Binary F1 (class-1 only) caused v2 to retain all class-1 rules even
+      when precision collapsed to 50% — it only cared about class-1 recall.
+    - Macro-F1 averages F1 across both classes with equal weight, so the
+      pruner must maintain performance on BOTH classes simultaneously.
+    - This naturally finds a balance between the original's high-precision/
+      low-recall and v2's high-recall/low-precision extremes.
     """
     preds = predict_with_masks(rs, masks, len(y), default_class)
-    return f1_score(y, preds, zero_division=0)
+    return f1_score(y, preds, average="macro", zero_division=0)
 
 
 def sequential_hill_climbing_prune(init_rs, X_train, y_train):
-    """
-    Sequential Hill Climbing pruning with F1 as the objective.
-
-    Changes from original:
-    - Uses F1 not accuracy as the keep/prune criterion.
-    - Recomputes default class after each successful prune.
-    - Uses precomputed masks for speed on 100k rows.
-    """
+    """Sequential Hill Climbing with macro-F1 objective and adaptive default."""
     if not init_rs:
         dc = int(np.bincount(y_train).argmax())
         return [], dc
 
     base_masks = [rule_match_mask(r, X_train) for r in init_rs]
-    P  = init_rs.copy()
-    M  = base_masks.copy()
-    dc = compute_default_class(P, X_train, y_train)
-    cur_f1 = ruleset_f1(P, M, y_train, dc)
+    P   = init_rs.copy()
+    M   = base_masks.copy()
+    dc  = compute_default_class(P, X_train, y_train)
+    cur = ruleset_macro_f1(P, M, y_train, dc)
 
     changed = True
     while changed:
@@ -490,11 +449,10 @@ def sequential_hill_climbing_prune(init_rs, X_train, y_train):
             Pn  = [r for j, r in enumerate(P) if j != i]
             Mn  = [m for j, m in enumerate(M) if j != i]
             dcn = compute_default_class(Pn, X_train, y_train)
-            new_f1 = ruleset_f1(Pn, Mn, y_train, dcn)
-            if new_f1 >= cur_f1:
-                cur_f1  = new_f1
-                P, M, dc = Pn, Mn, dcn
-                changed  = True
+            new = ruleset_macro_f1(Pn, Mn, y_train, dcn)
+            if new >= cur:
+                cur, P, M, dc = new, Pn, Mn, dcn
+                changed = True
                 break
     return P, dc
 
@@ -506,25 +464,41 @@ def run_pipeline(X, y, feature_names):
     init_rules = []
 
     print(f"\n{'='*60}")
-    print("Phase 1 & 2: Majority-Vote SHCK + Rule Generation (SMOTE-ENN)")
+    print("Phase 1 & 2: Majority-Vote SHCK + BorderlineSMOTE + Rule Gen")
+    print(f"  sampling_strategy={SAMPLING_STRATEGY}  lambda={LAMBDA_MINORITY}")
     print(f"{'='*60}")
 
     for fi, (tr, _) in enumerate(skf.split(X, y)):
         X_train, y_train = X[tr], y[tr]
 
-        # SMOTE-ENN: oversample minority class then clean noisy synthetic samples.
-        # Critical for one-hot data: plain SMOTE interpolates between 0 and 1,
-        # producing fractional values for binary columns and corrupting DT splits.
-        try:
-            sme             = SMOTEENN(random_state=RANDOM_STATE)
-            X_res, y_res    = sme.fit_resample(X_train, y_train)
-        except Exception as e:
-            print(f"  [Fold {fi+1}] SMOTE-ENN failed ({e}), using raw training data")
-            X_res, y_res    = X_train, y_train
+        # BorderlineSMOTE: only synthesises near the decision boundary.
+        # Guard: only apply if minority is genuinely under-represented.
+        # If the dataset is already at or above the target ratio, skip resampling
+        # (this is the cause of the "ratio required to remove samples" error —
+        # BorderlineSMOTE cannot reduce the minority class, only grow it).
+        n0_tr = int(np.sum(y_train == 0))
+        n1_tr = int(np.sum(y_train == 1))
+        current_ratio = n1_tr / max(n0_tr, 1)
+
+        if current_ratio < SAMPLING_STRATEGY:
+            # Minority is genuinely under-represented — safe to oversample
+            try:
+                bsmote       = BorderlineSMOTE(
+                    random_state=RANDOM_STATE,
+                    sampling_strategy=SAMPLING_STRATEGY,
+                    kind="borderline-1",
+                )
+                X_res, y_res = bsmote.fit_resample(X_train, y_train)
+            except Exception as e:
+                print(f"  [Fold {fi+1}] BorderlineSMOTE failed ({e}), using raw data")
+                X_res, y_res = X_train, y_train
+        else:
+            # Already balanced enough — use raw data, no resampling needed
+            X_res, y_res = X_train, y_train
 
         total_minority = int(np.sum(y_res == 1))
 
-        # Majority-vote SHCK — stable on ~300+ one-hot features
+        # Majority-vote SHCK
         sel = shck_majority_vote(X_res, y_res)
 
         dt = DecisionTreeClassifier(
@@ -537,11 +511,14 @@ def run_pipeline(X, y, feature_names):
         top_rules = extract_top_rules(rules, TOP_N_RULES_PER_FOLD, total_minority)
         init_rules.extend(top_rules)
 
-        c0 = sum(1 for r in top_rules if r["predicted_class"] == 0)
-        c1 = sum(1 for r in top_rules if r["predicted_class"] == 1)
+        c0     = sum(1 for r in top_rules if r["predicted_class"] == 0)
+        c1     = sum(1 for r in top_rules if r["predicted_class"] == 1)
+        n0_res = int(np.sum(y_res == 0))
+        n1_res = int(np.sum(y_res == 1))
+        tag    = "resampled" if len(y_res) != len(y_train) else "raw     "
         print(f"  Fold {fi+1:2d}: feats={len(sel):3d} | "
-              f"rules={len(top_rules):3d} (c0={c0}, c1={c1}) | "
-              f"SMOTE-ENN n={len(X_res)}")
+              f"rules={len(top_rules):2d} (c0={c0}, c1={c1}) | "
+              f"{tag} 0={n0_res} 1={n1_res} ratio={n1_res/max(n0_res,1):.2f}")
 
     print(f"\nInitial Transparent Ruleset: {len(init_rules)} rules")
 
@@ -550,24 +527,27 @@ def run_pipeline(X, y, feature_names):
         masks   = [rule_match_mask(r, X) for r in init_rules]
         matched = int(np.sum(np.any(np.column_stack(masks), axis=1)))
         dc_pre  = compute_default_class(init_rules, X, y)
-        pre_f1  = ruleset_f1(init_rules, masks, y, dc_pre)
-        print(f"  Pre-prune F1: {pre_f1*100:.2f}%, Matched: {matched}/{len(X)}")
+        pre_mf1 = ruleset_macro_f1(init_rules, masks, y, dc_pre)
+        preds_pre = predict_with_masks(init_rules, masks, len(y), dc_pre)
+        pre_rec   = recall_score(y, preds_pre, zero_division=0)
+        pre_prec  = precision_score(y, preds_pre, zero_division=0)
+        print(f"  Pre-prune macro-F1={pre_mf1*100:.2f}% | "
+              f"Rec={pre_rec*100:.2f}% | Prec={pre_prec*100:.2f}% | "
+              f"Matched={matched}/{len(X)}")
 
-    # F1-based Sequential Hill Climbing pruning
+    # Macro-F1 Sequential Hill Climbing pruning
     final, dc = sequential_hill_climbing_prune(init_rules, X, y)
 
     c0f = sum(1 for r in final if r["predicted_class"] == 0)
     c1f = sum(1 for r in final if r["predicted_class"] == 1)
     print(f"\n=== After Pruning ===")
-    print(f"  Rules: {len(final)} (class0={c0f}, class1={c1f}) | "
-          f"default_class={dc}")
+    print(f"  Rules: {len(final)} (class0={c0f}, class1={c1f}) | default={dc}")
     return final, dc
 
 
 # ─── 7. Display ──────────────────────────────────────────────────────────────
 
 def _format_condition(feature_name, op, threshold):
-    """Pretty-print a condition; binary one-hot columns shown as True/False."""
     if (op in {"<=", ">"}
             and abs(threshold - 0.5) < 1e-9
             and feature_name not in _NUMERIC_FEATURE_NAMES):
@@ -594,17 +574,16 @@ def display_rules(rules, feature_names):
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("DiabeRules — UCI Hospital Dataset (Improved v2)")
-    print("  SMOTE-ENN | Enhanced WOR | F1-Pruning | Majority-Vote SHCK")
+    print("DiabeRules — UCI Hospital Dataset (v3)")
+    print("  BorderlineSMOTE | Macro-F1 Pruning | Majority-Vote SHCK")
     print("=" * 60)
 
     final, dc = run_pipeline(X, y, feature_names)
     display_rules(final, feature_names)
 
-    # ── Metrics ──────────────────────────────────────────────────────────────
     preds = predict_with_rules(final, X, dc)
 
-    # Rule-based confidence scores for AUC (CC proportion of matched leaf)
+    # Rule confidence scores for AUC
     scores = []
     for s in X:
         matched = False
@@ -617,32 +596,42 @@ if __name__ == "__main__":
         if not matched:
             scores.append(float(dc))
 
-    acc  = accuracy_score(y, preds)
-    prec = precision_score(y, preds, zero_division=0)
-    rec  = recall_score(y, preds, zero_division=0)
-    f1   = f1_score(y, preds, zero_division=0)
-    mcc  = matthews_corrcoef(y, preds)
+    acc   = accuracy_score(y, preds)
+    prec  = precision_score(y, preds, zero_division=0)
+    rec   = recall_score(y, preds, zero_division=0)
+    f1_b  = f1_score(y, preds, zero_division=0)
+    f1_m  = f1_score(y, preds, average="macro", zero_division=0)
+    mcc   = matthews_corrcoef(y, preds)
     try:
         auc = roc_auc_score(y, scores)
     except Exception:
         auc = float("nan")
 
     print(f"\n{'='*60}")
-    print("Final Model Metrics (full dataset — use for comparison only)")
+    print("Final Model Metrics (v3)")
     print(f"{'='*60}")
-    print(f"  Accuracy  : {acc*100:.2f}%")
-    print(f"  Recall    : {rec*100:.2f}%")
-    print(f"  Precision : {prec*100:.2f}%")
-    print(f"  F1 Score  : {f1*100:.2f}%")
-    print(f"  MCC       : {mcc:.4f}")
-    print(f"  AUC-ROC   : {auc:.4f}")
+    print(f"  Accuracy    : {acc*100:.2f}%")
+    print(f"  Recall      : {rec*100:.2f}%")
+    print(f"  Precision   : {prec*100:.2f}%")
+    print(f"  F1 (binary) : {f1_b*100:.2f}%")
+    print(f"  F1 (macro)  : {f1_m*100:.2f}%")
+    print(f"  MCC         : {mcc:.4f}")
+    print(f"  AUC-ROC     : {auc:.4f}")
 
     print(f"\n{'='*60}")
-    print("Paper Reported Metrics (UCI 130-US Hospitals)")
+    print("Comparison")
     print(f"{'='*60}")
-    print("  Accuracy  : 90.84%")
-    print("  Recall    : 88.41%")
-    print("  Precision : 85.74%")
-    print("  F1 Score  : 87.05%")
-    print(f"\nNote: For honest generalisation estimates, run with")
-    print("      nested cross-validation (see diaberules_improved.py).")
+    print("            Acc    Rec    Prec   F1(bin)")
+    print(f"  Original: 62.76  45.72  63.29  53.09   ← low recall")
+    print(f"  v2 (bad): 53.87  89.97  49.98  64.26   ← low precision")
+    print(f"  v3 (you): {acc*100:.2f}  {rec*100:.2f}  {prec*100:.2f}  {f1_b*100:.2f}   ← target balance")
+    print(f"\n  Paper target (UCI): Acc=90.84, Rec=88.41, Prec=85.74, F1=87.05")
+    print(f"\nNote: Paper metrics used nested CV + full preprocessing pipeline.")
+    print(f"      Run with nested CV for honest generalisation estimates.")
+
+    # ── Tuning hint ──────────────────────────────────────────────────────────
+    print(f"\n{'='*60}")
+    print("Tuning hint: if recall is still too low, increase SAMPLING_STRATEGY")
+    print("  (e.g. 0.7 or 0.8). If precision is too low, decrease it (e.g. 0.5).")
+    print("LAMBDA_MINORITY can also be nudged: higher = more recall bias.")
+    print(f"{'='*60}")

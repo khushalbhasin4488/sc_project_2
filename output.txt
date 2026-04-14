@@ -14,8 +14,6 @@ Final Model Metrics (Our Implementation + SMOTE)
   F1 Score  : 89.68%
 
 Final Model Metrics UCI (Our Implementation + SMOTE)
-============================================================
-  Accuracy  : 62.76%  
-  Recall    : 45.72%  
-  Precision : 63.29%
-  F1 Score  : 53.09%  
+v1 : 53.87  89.97  49.98  64.26   ← low precision
+v2 : 62.93  53.78  61.12  57.22   ← target balance
+
