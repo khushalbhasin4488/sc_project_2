@@ -1,0 +1,6 @@
+=== Intelligible Insight Rules ===
+  Rule 1: IF Glucose <= 101.50 AND BloodPressure > 51.00 AND BloodPressure <= 83.50 AND SkinThickness <= 41.50 AND DiabetesPedigreeFunction <= 0.82 AND Age <= 30.50 THEN Class=0 (WOR=97.80, CC=88, IC=0)
+  Rule 2: IF Pregnancies > 0.50 AND Insulin <= 87.50 AND BMI > 22.75 AND BMI <= 48.10 AND DiabetesPedigreeFunction <= 0.68 THEN Class=0 (WOR=68.20, CC=56, IC=0)
+  Rule 3: IF BMI <= 22.80 THEN Class=0 (WOR=61.00, CC=40, IC=0)
+  Rule 4: IF Pregnancies <= 3.50 AND Glucose <= 99.50 AND SkinThickness <= 41.50 AND Insulin > 36.50 AND BMI <= 47.80 THEN Class=0 (WOR=95.86, CC=83, IC=0)
+  Rule 5: IF Glucose <= 138.00 AND Insulin > 48.50 AND BMI <= 26.35 THEN Class=0 (WOR=110.20, CC=91, IC=0)
