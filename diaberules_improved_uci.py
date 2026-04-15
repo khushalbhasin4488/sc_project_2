@@ -26,6 +26,14 @@ ID_COLUMNS             = ["encounter_id", "patient_nbr"]
 LOW_VARIANCE_THRESHOLD = 0.995
 
 # ─── 1. Load & Preprocess ────────────────────────────────────────────────────
+def compute_default_class(ruleset, X_train, y_train):
+    if not ruleset: 
+        return int(np.bincount(y_train).argmax())
+    preds = predict_with_rules(ruleset, X_train, default_class=-1)
+    unmatched_labels = y_train[preds == -1]
+    if len(unmatched_labels) == 0:
+        return int(np.bincount(y_train).argmax())
+    return int(np.bincount(unmatched_labels).argmax())
 
 def load_id_mappings(path):
     mappings = {}
@@ -198,6 +206,19 @@ def shck(X_train, y_train, max_iter=50):
             best_acc = a; S = F_new.copy(); F = F_new.copy()
     return S
 
+def majority_vote_shck(X_train, y_train, max_iter=30, R=5):
+    votes = []
+    for seed in range(R):
+        np.random.seed(42 + seed) 
+        selected_features = shck(X_train, y_train, max_iter=max_iter)
+        votes.extend(selected_features)
+    np.random.seed(42) 
+    counts = Counter(votes)
+    final_selected = [f_idx for f_idx, count in counts.items() if count > (R / 2)]
+    if len(final_selected) < 3:
+        final_selected = [f_idx for f_idx, count in counts.most_common(3)]
+    return sorted(final_selected)
+
 # ─── 3. Rule Extraction ──────────────────────────────────────────────────────
 
 def rule_matches(conds, sample):
@@ -230,14 +251,20 @@ def extract_rules_from_dt(dt, feat_idx):
     recurse(0, [])
     return rules
 
-def compute_wor(CC, IC, RL):
+def compute_wor(CC, IC, RL, is_minority_rule, N_min, lambda_weight=2.0):
     if CC <= 0: return -9999.0
-    return (CC-IC)/(CC+IC) + CC/(IC+1) - IC/CC + CC/RL
+    base_wor = (CC - IC) / (CC + IC) + (CC / (IC + 1)) - (IC / CC) + (CC / RL)
+    bonus = 0.0
+    if is_minority_rule:
+        bonus = lambda_weight * (CC / max(N_min, 1))
+    return base_wor + bonus
 
-def extract_top_rules(rules, top_n):
+def extract_top_rules(rules, top_n, y_train_fold , minority_class_label = 1):
     """Return top N rules per class by WOR."""
+    N_min = np.sum(y_train_fold == minority_class_label)
     for r in rules:
-        r['WOR'] = compute_wor(r['CC'], r['IC'], r['RL'])
+        is_minority = (r['predicted_class'] == minority_class_label)
+        r['WOR'] = compute_wor(r['CC'], r['IC'], r['RL'], is_minority, N_min)
     c0_rules = sorted([r for r in rules if r['predicted_class'] == 0], key=lambda x: x['WOR'], reverse=True)
     c1_rules = sorted([r for r in rules if r['predicted_class'] == 1], key=lambda x: x['WOR'], reverse=True)
     return c0_rules[:top_n] + c1_rules[:top_n]
@@ -258,17 +285,40 @@ def ruleset_accuracy(rs, X, y, default_class=0):
     if not rs: return accuracy_score(y, np.full(len(y), default_class))
     return accuracy_score(y, predict_with_rules(rs, X, default_class))
 
-def sequential_hill_climbing_prune(init_rs, X, y, default_class=0):
-    P = init_rs.copy(); acc = ruleset_accuracy(P, X, y, default_class)
+def ruleset_macro_f1(rs, X, y, default_class=0):
+    """Evaluates a ruleset using Macro-F1 to equally weight both classes."""
+    if not rs: 
+        preds = np.full(len(y), default_class)
+    else:
+        preds = predict_with_rules(rs, X, default_class)
+    return f1_score(y, preds, average='macro', zero_division=0)
+
+def sequential_hill_climbing_prune_f1(init_rules, X_train, y_train):
+    if not init_rules: return [], int(np.bincount(y_train).argmax())
+    
+    P = init_rules.copy()
+    dc = compute_default_class(P, X_train, y_train)
+    
+    # 1. Start tracking the baseline Macro-F1 score instead of Accuracy
+    best_f1 = ruleset_macro_f1(P, X_train, y_train, dc) 
+    
     changed = True
     while changed:
         changed = False
         for i in range(len(P)):
             Pn = [r for j, r in enumerate(P) if j != i]
-            an = ruleset_accuracy(Pn, X, y, default_class)
-            if an >= acc: acc = an; P = Pn; changed = True; break
-    return P, acc
-
+            dcn = compute_default_class(Pn, X_train, y_train)
+            
+            current_f1 = ruleset_macro_f1(Pn, X_train, y_train, dcn)
+            
+            if current_f1 >= best_f1:
+                best_f1 = current_f1
+                P = Pn
+                dc = dcn
+                changed = True
+                break
+                
+    return P, dc
 # ─── 5. Paper-style pipeline ─────────────────────────────────────────────────
 
 def run_paper_style(X, y, feature_names):
@@ -297,13 +347,13 @@ def run_paper_style(X, y, feature_names):
             Xt_res, yt_res = Xt, yt
         
         # Run standard sequential SHCK (using max_iter=30 for UCI speeds)
-        sel = shck(Xt_res, yt_res, max_iter=30)
+        sel = majority_vote_shck(Xt_res, yt_res, max_iter=30)
         
         dt = DecisionTreeClassifier(criterion='entropy', random_state=RANDOM_STATE, min_samples_leaf=50)
         dt.fit(Xt_res[:, sel], yt_res)
         
         rules = extract_rules_from_dt(dt, sel)
-        top_rules = extract_top_rules(rules, TOP_N_RULES_PER_FOLD)
+        top_rules = extract_top_rules(rules, TOP_N_RULES_PER_FOLD, yt_res)
         init_rules.extend(top_rules)
         
         c0_count = sum(1 for r in top_rules if r['predicted_class'] == 0)

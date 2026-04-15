@@ -1,26 +1,11 @@
-"""
-DiabeRules — Corrected Implementation (Final v7)
-Paper: "DiabeRules: A Transparent Rule-Based Expert System for Managing Diabetes"
-
-Key findings from cross-verification:
-1. WOR parameters (CC/IC) must be the actual leaf sample counts (tree_.n_node_samples),
-   not the normalized proportions returned by tree_.value.
-2. SMOTE is applied to balance training data before feature selection and rule generation.
-3. With balanced data, rules for BOTH classes are extracted. This is critical because
-   SMOTE-balanced trees produce narrower class-0 leaves — extracting only class-0 rules
-   would reduce coverage and hurt precision. Extracting both-class rules lets the system
-   actively classify both directions instead of relying on a crude default.
-4. Default class for unmatched samples = majority class of unmatched training data.
-"""
-
 import numpy as np
 import pandas as pd
+from collections import Counter
 from sklearn.tree import DecisionTreeClassifier, _tree
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from imblearn.over_sampling import SMOTE
 import warnings
-# from sklearn.ensemble import RandomForestClassifier
 warnings.filterwarnings('ignore')
 
 RANDOM_STATE = 42
@@ -38,13 +23,37 @@ X = df.drop('Outcome', axis=1).values
 y = df['Outcome'].values
 feature_names = list(df.drop('Outcome', axis=1).columns)
 
-TOP_N_RULES_PER_FOLD = 10  # Top N rules per class per fold
+TOP_N_RULES_PER_FOLD = 10
 
 print(f"Dataset: {X.shape[0]} samples, {X.shape[1]} features")
 print(f"Class distribution: 0={np.sum(y==0)}, 1={np.sum(y==1)}")
 
 
-# ─── 2. SHCK Feature Selection ───────────────────────────────────────────────
+# ───SHCK───────────────────────────────────────────────
+def majority_vote_shck(X_train, y_train, max_iter=30, R=5):
+    votes = []
+    for seed in range(R):
+        np.random.seed(42 + seed) 
+        selected_features = shck(X_train, y_train, max_iter=max_iter)
+        votes.extend(selected_features)
+    np.random.seed(42) 
+    counts = Counter(votes)
+    final_selected = [f_idx for f_idx, count in counts.items() if count > (R / 2)]
+    if len(final_selected) < 3:
+        final_selected = [f_idx for f_idx, count in counts.most_common(3)]
+    return sorted(final_selected)
+def compute_default_class(ruleset, X_train, y_train):
+    if not ruleset: 
+        return int(np.bincount(y_train).argmax())
+        
+    preds = predict_with_rules(ruleset, X_train, default_class=-1)
+    
+    unmatched_labels = y_train[preds == -1]
+    
+    if len(unmatched_labels) == 0:
+        return int(np.bincount(y_train).argmax())
+        
+    return int(np.bincount(unmatched_labels).argmax())
 
 def compute_cluster_scores(X_sub, y, K):
     n = X_sub.shape[1]
@@ -113,20 +122,22 @@ def extract_rules_from_dt(dt, feat_idx):
     return rules
 
 
-def compute_wor(CC, IC, RL):
+
+
+def compute_wor(CC, IC, RL, is_minority_rule, N_min, lambda_weight=2.0):
     if CC <= 0: return -9999.0
-    return (CC-IC)/(CC+IC) + CC/(IC+1) - IC/CC + CC/RL
+    base_wor = (CC - IC) / (CC + IC) + (CC / (IC + 1)) - (IC / CC) + (CC / RL)
+    bonus = 0.0
+    if is_minority_rule:
+        bonus = lambda_weight * (CC / max(N_min, 1))
+    return base_wor + bonus
 
-
-def extract_top_rules(rules, top_n):
-    """Return top N rules per class by WOR.
-    With SMOTE-balanced training, both classes have strong leaf nodes.
-    Extracting rules for both classes lets the system actively classify
-    both directions, which is critical for precision.
-    """
+def extract_top_rules(rules, top_n, y_train_fold):
+    N_min = np.sum(y_train_fold == 1)
     for r in rules:
-        r['WOR'] = compute_wor(r['CC'], r['IC'], r['RL'])
-    # Extract top rules from BOTH classes
+        is_minority_rule = (r['predicted_class'] == 1)
+        r['WOR'] = compute_wor(r['CC'], r['IC'], r['RL'], is_minority_rule, N_min)
+
     c0_rules = sorted([r for r in rules if r['predicted_class'] == 0],
                       key=lambda x: x['WOR'], reverse=True)
     c1_rules = sorted([r for r in rules if r['predicted_class'] == 1],
@@ -181,12 +192,12 @@ def run_paper_style(X, y, feature_names):
         smote = SMOTE(random_state=RANDOM_STATE)
         Xt_res, yt_res = smote.fit_resample(Xt, yt)
         
-        sel = shck(Xt_res, yt_res, max_iter=50)
+        sel = majority_vote_shck(Xt_res, yt_res, max_iter=50)
         dt = DecisionTreeClassifier(criterion='entropy', random_state=RANDOM_STATE,
                                     min_samples_leaf=5)
         dt.fit(Xt_res[:, sel], yt_res)
         rules = extract_rules_from_dt(dt, sel)
-        top_rules = extract_top_rules(rules, TOP_N_RULES_PER_FOLD)
+        top_rules = extract_top_rules(rules, TOP_N_RULES_PER_FOLD, yt_res)
         init_rules.extend(top_rules)
         c0_count = sum(1 for r in top_rules if r['predicted_class'] == 0)
         c1_count = sum(1 for r in top_rules if r['predicted_class'] == 1)

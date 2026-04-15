@@ -1,9 +1,6 @@
 """
-DiabeRules — Re-Implementation (Fixing Deviations)
 Authentic C4.5 integration, correct temporal split, proper pruning, and Risk Factor Analysis.
-
 Note regarding C4.5:
-Since libraries like `chefboost` do not expose leaf-node `CC` and `IC` statistics (which are vital for calculating the WOR metric described in the paper), an internal custom C4.5 builder `c45_tree` is utilized here. This ensures exact calculation of correct/incorrect samples at the nodes.
 """
 import sys
 sys.stdout.reconfigure(line_buffering=True)
@@ -20,7 +17,7 @@ DEFAULT_CLASS = 1
 N_FOLDS = 10
 HOLDOUT_SIZE = 0.2
 
-# ─── 1. Load & Preprocess ────────────────────────────────────────────────────
+# Loading and Preprocessing 
 df = pd.read_csv('/Users/khushalbhasin/Documents/code/sc_project/diabetes.csv')
 cols_with_zeros = ['Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI']
 X = df.drop('Outcome', axis=1).values
@@ -34,6 +31,7 @@ def temporal_split(X, y, holdout_size=HOLDOUT_SIZE):
 
 
 X_dev, X_holdout, y_dev, y_holdout = temporal_split(X, y)
+
 # Compute medians from dev cohort only to prevent data leakage
 for col_name in cols_with_zeros:
     col_idx = feature_names.index(col_name)
@@ -449,7 +447,6 @@ class C45Tree:
 
         initial_entropy = entropy(y)
 
-        # Iterate over features to find best split using Information Gain Ratio
         for feat_idx in range(X.shape[1]):
             x_col = X[:, feat_idx]
             unique_vals = np.unique(x_col)
@@ -535,7 +532,7 @@ if __name__ == "__main__":
 
     final, dev_train_acc = fit_diaberules(X_dev, y_dev, verbose=True)
     display_rules(final)
-    save_rules_to_file(final, "/Users/khushalbhasin/Documents/code/sc_project/intelligible_rules.txt")
+    # save_rules_to_file(final, "/Users/khushalbhasin/Documents/code/sc_project/intelligible_rules.txt")
 
     preds = predict_with_rules(final, X_holdout)
     acc = accuracy_score(y_holdout, preds)
